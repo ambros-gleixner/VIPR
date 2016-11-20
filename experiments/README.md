@@ -11,7 +11,7 @@ The instance names link to gzipped certificates for the ranges stated in the las
 ## Results for 56 numerically easy MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
 
 | Instance                                                                         | SCIP nodes  | SCIP time |SCIP+C nodes|SCIP+C time|tightening time|checking time|raw size|tightened size|gzipped size|  verified range [dualbound, primalbound] |
-| :------------------------------------------------------------------------------- | ----------: | --------: | ---------: | ------: | ------: | ------: | ----------: | ---------: | --------: | -------------------------------------------------: |
+| :------------------------------------------------------------------------------- | ----------: | --------: | ---------: | ------: | ------: | ------: | ----------: | ---------: | --------: | :------------------------------------------------- |
 | [30:70:4_5:0_95:100](http://www.zib.de/gleixner/vipr/30:70:4_5:0_95:100.vipr.gz) |         549 |     188.3 |        321 |   116.7 |     0.5 |     0.4 |        8488 |       3888 |       500 |                                             [3, 3] |
 |                           [acc-0](http://www.zib.de/gleixner/vipr/acc-0.vipr.gz) |          63 |      10.7 |         63 |    11.1 |     0.1 |     0.1 |         464 |        476 |        68 |                                             [0, 0] |
 |                           [acc-1](http://www.zib.de/gleixner/vipr/acc-1.vipr.gz) |          50 |      16.6 |         48 |     8.2 |     0.1 |     0.1 |         640 |        664 |        88 |                                             [0, 0] |
