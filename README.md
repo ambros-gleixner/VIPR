@@ -19,7 +19,7 @@ A [makefile](code/makefile) is provided to build files, they rely on the [GNU GM
 
 ## File format specification (.vipr)
 
-A conceptual description of the verified integer programming result (.vipr) file format is given in [Verifying Integer Programming Results](VerifyingIPResults.pdf).  A more detailed technical description is provided [here](cert_spec_v1_0.html).
+A conceptual description of the verified integer programming result (.vipr) file format is given in [Verifying Integer Programming Results](VerifyingIPResults.pdf).  A more detailed technical description is provided [here](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html).
 
 A small example is given as [paper_eg3.vipr](code/paper_eg3.vipr), and certificates for large instances can be found [here](experiments/README.md).
 
