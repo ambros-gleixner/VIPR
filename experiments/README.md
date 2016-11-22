@@ -1,6 +1,6 @@
 # Computational experiments using exact SCIP and VIPR
 
-This document contains supplementary information for the article [Verifying Integer Programming Results](http://???),
+This document contains supplementary information for the article [Verifying Integer Programming Results](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044),
 ZIB-Report 16-58, November 2016.
 
 ## Experimental setup
