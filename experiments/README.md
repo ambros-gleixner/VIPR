@@ -1,11 +1,6 @@
 # Computational experiments using exact SCIP and VIPR
 
-This document contains supplementary information for the article [Verifying Integer Programming Results](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044),
-ZIB-Report 16-58, November 2016.
-
-## Experimental setup
-
-The instance names link to gzipped certificates for the ranges stated in the last column, that can be verified using the `viprchk` tool.
+This document contains supplementary information for the article [Verifying Integer Programming Results](https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6104), ZIB-Report 16-58, November 2016.  The instance names link to gzipped certificates for the ranges stated in the last column, that can be verified using the `viprchk` tool.
 
 
 ## Results for 56 numerically easy MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
