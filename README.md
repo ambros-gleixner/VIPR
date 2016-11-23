@@ -11,7 +11,7 @@ This repository contains a detailed technical [specification of the certificate 
 
 ## Software
 
-This repository contains three C++ programs:
+*VIPR* currently comes with three C++ programs:
 - [`viprchk`](code/viprchk.cpp): A program that verifies mixed-integer linear programming certificate files specified in the `.vipr` file format.
 - [`viprttn`](code/viprchk.cpp): A program that tightens and improves .vipr files, potentially reducing their size and allowing for easier checking.
 - [`vipr2html`](code/viprchk.cpp): A program that converts `.vipr` certificate files to a human readable HTML format (not recommended for large files).
