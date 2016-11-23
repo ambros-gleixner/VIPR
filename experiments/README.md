@@ -78,14 +78,15 @@ running times and certificate file sizes were computed as shifted geometric mean
 respectively.
 
 Finally, in the following tables, we report instance-wise results on the time, nodes, and and memory required to produce
-and verify certificates.  Here, the final column states the range of primal and dual bound verified for the instance, or
-`infeasible` for the three unsatisfiable MIPs `alu10_5`, `alu16_2`, and `opti_157_0`.  The instance names link to
-gzipped certificates for the proven primal and dual bounds stated in the last column.
+and verify certificates.  Note that file sizes are stated in kB in these tables.  Additionally, the final column states
+the range of primal and dual bound verified for the instance, or `infeasible` for the three unsatisfiable MIPs
+`alu10_5`, `alu16_2`, and `opti_157_0`.  The instance names link to gzipped certificates for the proven primal and dual
+bounds stated in the last column.
 
 
 ### Results for 56 numerically easy MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
 
-| Instance                                                                         | SCIP nodes  | SCIP time (s) |SCIP+C nodes|SCIP+C time (s) |tightening time (s)|checking time (s)|raw size (kB)|tightened size (kB)|gzipped size (kB)|  verified range [dualbound, primalbound] |
+| Instance                                                                         | SCIP nodes  | SCIP time (s) |SCIP+C nodes|SCIP+C time (s) |ttn time (s)|chk time (s)|raw size (kB)|tightened size (kB)|gzipped size (kB)|  verified range [dualbound, primalbound] |
 | :------------------------------------------------------------------------------- | ----------: | --------: | ---------: | ------: | ------: | ------: | ----------: | ---------: | --------: | :------------------------------------------------- |
 | [30:70:4_5:0_95:100](http://www.zib.de/gleixner/vipr/30:70:4_5:0_95:100.vipr.gz) |         549 |     188.3 |        321 |   116.7 |     0.5 |     0.4 |        8488 |       3888 |       500 |                                             [3, 3] |
 |                           [acc-0](http://www.zib.de/gleixner/vipr/acc-0.vipr.gz) |          63 |      10.7 |         63 |    11.1 |     0.1 |     0.1 |         464 |        476 |        68 |                                             [0, 0] |
