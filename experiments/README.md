@@ -1,11 +1,57 @@
 # Computational experiments using exact SCIP and VIPR
 
-This document contains supplementary information for the article [Verifying Integer Programming Results](https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6104), ZIB-Report 16-58, November 2016.  The instance names link to gzipped certificates for the ranges stated in the last column, that can be verified using the `viprchk` tool.
+This document contains supplementary information on the empirical experiments conducted for the article
+
+> Kevin K.H. Cheung, Ambros Gleixner, and Daniel E. Steffy: [Verifying Integer Programming Results](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044), ZIB-Report 16-58, November 2016, [`urn:nbn:de:0297-zib-61044`](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044).
 
 
-## Results for 56 numerically easy MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
+## Experimental setup
 
-| Instance                                                                         | SCIP nodes  | SCIP time |SCIP+C nodes|SCIP+C time|tightening time|checking time|raw size|tightened size|gzipped size|  verified range [dualbound, primalbound] |
+We created a modified version of the [exact rational MIP solver SCIP](http://scip.zib.de/#exact) described by [Cook et
+al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6) and used it to compute certificates for several MIP instances
+from the literature.  Exact SCIP uses a hybrid of floating-point and exact rational arithmetic to efficiently compute
+exact solutions using a pure branch-and-bound algorithm.  In our experiments, the rational MIP solver uses
+CPLEX~12.6.0.0 as its underlying floating-point LP solver and a patched version of
+[QSopt\_ex~2.5.10](http://www.dii.uchile.cl/~daespino/ESolver_doc/main.html) as its underlying exact LP solver.  The
+exact MIP solver supports several methods for computing valid dual bounds.  Our certificate printing functionality is
+currently supported by the \emph{project-and-shift} method (for dual feasible LP relaxations) and the \emph{exact LP}
+method (for dual feasible LP relaxations and Farkas proofs).  For details on these methods see [Cook et
+al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6).  Future plans are to include certificate printing functionality
+in all dual bounding methods and release this in subsequent versions of exact SCIP.  Our developmental version is
+currently available from the authors by request.  Experiments were conducted on a cluster of Intel(R) Xeon(R) E5-2660 v3
+CPUs running at 2.60GHz.  Jobs were run exclusively to ensure accurate time measurement.
+
+
+## Computational results
+
+As a test bed, we considered the \emph{easy} and \emph{numerically difficult} (referred to here as `\emph{hard}') test
+sets from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6).  These test sets consist of publically
+available instances from well-known libraries including MIPLIB 2003, MIPLIB 3, MIPLIB 2010, COR@L, and Hans Mittelmann.
+
+In the following, we report instance-wise results on the time and memory required to produce and verify
+certificates.  For aggregate statistics including averages over different subsets of instances, see [ZIB-Report
+16-58](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044).
+
+The columns `SCIP nodes` and `SCIP time` report on the performance of the exact version of SCIP, using its default dual
+bounding strategy.  The columns `SCIP+C nodes` and `SCIP+C time` state the performance for the version of exact SCIP
+that generates certificates during the solution process.  Since certificate printing is not supported for all dual
+bounding methods it uses only a subset of the dual bounding methods, contributing to its slower speed.  In an
+independent experiment, we estimated the average overhead for file input and output to be about 7% over these test sets,
+which is included in the time reported for SCIP+C.
+
+The next five columns report time (in kB) for tightening and checking certificate files and the sizes of the certifcate
+files: before tightening, after tightening, and after running them through `gzip` compression.
+
+The final column states the range of primal and dual bound verified for the instance, or `infeasible` for the three
+instances `alu10_5`, `alu16_2`, and `opti_157_0`.  The instance names link to gzipped certificates for the proven primal
+and dual bounds stated in the last column.  They were created using an extended version of the [exact rational
+version](http://scip.zib.de/#exact) of the MIP solver SCIP and verified using the `viprchk` tool provided
+[here](../code/viprchk.cpp).
+
+
+### Results for 56 numerically easy MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
+
+| Instance                                                                         | SCIP nodes  | SCIP time (s) |SCIP+C nodes|SCIP+C time (s) |tightening time (s)|checking time (s)|raw size (kB)|tightened size (kB)|gzipped size (kB)|  verified range [dualbound, primalbound] |
 | :------------------------------------------------------------------------------- | ----------: | --------: | ---------: | ------: | ------: | ------: | ----------: | ---------: | --------: | :------------------------------------------------- |
 | [30:70:4_5:0_95:100](http://www.zib.de/gleixner/vipr/30:70:4_5:0_95:100.vipr.gz) |         549 |     188.3 |        321 |   116.7 |     0.5 |     0.4 |        8488 |       3888 |       500 |                                             [3, 3] |
 |                           [acc-0](http://www.zib.de/gleixner/vipr/acc-0.vipr.gz) |          63 |      10.7 |         63 |    11.1 |     0.1 |     0.1 |         464 |        476 |        68 |                                             [0, 0] |
@@ -64,9 +110,9 @@ This document contains supplementary information for the article [Verifying Inte
 |                             [vpm1](http://www.zib.de/gleixner/vipr/vpm1.vipr.gz) |      307794 |      48.3 |     307794 |   583.9 |   298.3 |   277.3 |     6132956 |    2997324 |    227164 |                                           [20, 20] |
 |                             [vpm2](http://www.zib.de/gleixner/vipr/vpm2.vipr.gz) |      780423 |     150.9 |     466524 |  1130.6 |   554.7 |   250.7 |    10505052 |    2913832 |    477432 |           [7437176122954717/562949953421312, 55/4] |
 
-## Results for 50 numerically difficult MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
+### Results for 50 numerically difficult MIPs from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6)
 
-| Instance                                                                                                | SCIP nodes  | SCIP time | SCIP+C nodes|SCIP+C time|tightening time|checking time|raw size|tightened size|gzipped size| verified range [dualbound, primalbound] |
+| Instance                                                                                                | SCIP nodes  | SCIP time (s) | SCIP+C nodes|SCIP+C time (s)|tightening time (s)|checking time (s)|raw size (kB)|tightened size (kB)|gzipped size (kB)| verified range [dualbound, primalbound] |
 | :------------------------------------------------------------------------------------------------------ | ----------: | --------: | ----------: | ------: | ------: | ------: | ----------: | ---------: | --------: | :------------------------------------------------ |
 |                                              [alu10_1](http://www.zib.de/gleixner/vipr/alu10_1.vipr.gz) |     1630142 |    3600.0 |      884351 |  2682.4 |   852.2 |   119.6 |  10499492 |   894736 |    65152 |                  [2544271988888683/2199023255552, inf) |
 |                                              [alu10_5](http://www.zib.de/gleixner/vipr/alu10_5.vipr.gz) |        3661 |       2.1 |        4075 |    13.4 |     2.1 |     0.2 |    111884 |     1376 |      128 |                                             infeasible |
