@@ -1,28 +1,38 @@
-# VIPR
-Verifying Integer Programming Results
+# VIPR. Verifying Integer Programming Results
 
-This repository contains software to check certificates for integer programming results and provides technical specifications for the .vipr certificate file format.
+## About
 
-Supplementary information is provided for the article [Verifying Integer Programming Results](https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6104), ZIB-Report 16-58, November 2016.
+*VIPR* is new a software project to verify, in exact rational arithmetic, the correctness of results computed by mixed-integer linear programming solvers.  It is based on an elementary file format for LP-based branch-and-cut certificates proposed in the article
 
-Detailed instance-wise results for the computational experiments in the article are provided [here](experiments/README.md).  Links to all associated .vipr certificate files are also provided.
+> Kevin K.H. Cheung, Ambros Gleixner, and Daniel E. Steffy: [Verifying Integer Programming Results](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044), ZIB-Report 16-58, November 2016, [`urn:nbn:de:0297-zib-61044`](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044).
 
-## Software tools
+This repository contains a detailed technical [specification of the certificate file format `.vipr`](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html), [code](code/) to compress, check, and display certificate files, and [supplementary information](experiments/) for the computational experiments conducted for the article above.
+
+
+## Software
 
 This repository contains three C++ programs:
-- [viprchk](code/viprchk.cpp): A program that verifies mixed-integer linear programming certificate files specified in the .vipr file format, described below.
-- [viprttn](code/viprchk.cpp): A program that tightens and improves .vipr files, potentially reducing their size and allowing for easier checking.
-- [vipr2html](code/viprchk.cpp): A program that converts .vipr certificate files to a human readable HTML format (not recommended for large files.
+- [`viprchk`](code/viprchk.cpp): A program that verifies mixed-integer linear programming certificate files specified in the `.vipr` file format.
+- [`viprttn`](code/viprchk.cpp): A program that tightens and improves .vipr files, potentially reducing their size and allowing for easier checking.
+- [`vipr2html`](code/viprchk.cpp): A program that converts `.vipr` certificate files to a human readable HTML format (not recommended for large files).
 
-A [makefile](code/makefile) is provided to build files, they rely on the [GNU GMP library](https://gmplib.org/) for exact rational arithmetic.
+The code should compile with most modern compilers supporting the C++11 standard.  Directory [`code`](code/) provides a basic [`makefile`](code/makefile).  We have successfully built the tools with GNU g++ version 5.4.0 under Ubuntu 16.04.4.  It depends on the [GNU Multiple Precision library](https://gmplib.org/).
 
 
-## File format specification (.vipr)
+## File format specification `.vipr`
 
-A conceptual description of the verified integer programming result (.vipr) file format is given in [Verifying Integer Programming Results](https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6104).  A more detailed technical description is provided [here](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html).
+A conceptual description of the verified integer programming result (`.vipr`) file format is given in the article [above](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044).  A more detailed technical specification is provided [here](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html).
 
-A small example is given as [paper_eg3.vipr](code/paper_eg3.vipr), and certificates for large instances can be found [here](experiments/README.md).
+A small example is given as [paper_eg3.vipr](code/paper_eg3.vipr).  Certificates for large MIP instances from the literature can be found as part of the [supplementary information](experiments/) of the article.
 
-## Software for generating (.vipr) certificates
 
-A branch of the [exact rational version](http://scip.zib.de/#exact) of the [SCIP optimization software](http://scip.zib.de) has been developed to produce certificates of MIP results.  It is currently under active development and is available by request from the authors of this project.  It will be included in future releases of the SCIP software.
+## Developers
+
+- [Kevin K.H. Cheung](https://carleton.ca/math/people/kevin-cheung/), School of Mathematics and Statistics, Carleton University
+- [Ambros Gleixner](http://www.zib.de/gleixner), Department Optimization, Zuse Institute Berlin
+- [Daniel E. Steffy](https://files.oakland.edu/users/steffy/web/), Department of Mathematics and Statistics, Oakland University
+
+
+## Software for generating `.vipr` certificates
+
+We have created an extension of the [exact rational version](http://scip.zib.de/#exact) of the [SCIP optimization software](http://scip.zib.de) that is able to produce certificates of MIP results.  It is currently under active development and is available by request from the authors of this project.  It will be included in future releases of the SCIP software.
