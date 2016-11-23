@@ -41,13 +41,14 @@ exclude only one instance (`nw04`) because `viprttn` ran out of memory.
 
 ### Aggregate results
 
-Each certificate file could be verified as correct: `viprchk` did not exhibit any case in which SCIP pruned an optimal
-solution or incorrectly accepted an infeasible solution in exact rational arithmetic.  Aggregate statistics of the
-computational performance are given in [ZIB-Report 16-58](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044) and the
+Each certificate file could be verified as correct: `viprchk` did not exhibit any case in which exact SCIP pruned an
+optimal solution or incorrectly accepted an infeasible solution in exact rational arithmetic.  Aggregate statistics of
+the computational performance are given in [ZIB-Report 16-58](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044) and the
 following table:
 
-| Test set               | inst | solved | SCIP time (s) | SCIP solved | SCIP+C time (s) | ttn time (s) | chk time (s)  | raw size (MB) | ttn size (MB) | gz size (MB) |
-| :--------------------- | ---: | -----: | ------------: | ----------: | --------------: | -----------: | ------------: | ------------: | ------------: | ----------:  |
+| Test set               | inst | SCIP solved | SCIP time (s) | SCIP solved | SCIP+C time (s) | ttn time (s) | chk time (s)  | raw size (MB) | ttn size (MB) | gz size (MB) |
+| :--------------------- | ---: | ----------: | ------------: | ----------: | --------------: | -----------: | ------------: | ------------: | ------------: | ----------:  |
+|                        |          |            |           |            |           |          |          |           |          |        |
 | easy-all               |       56 |         53 |      62.0 |         39 |     180.8 |     25.8 |     28.9 |       214 |       72 |      22|
 | easy-solved            |       39 |         39 |      23.2 |         39 |      48.0 |      9.6 |     13.4 |        77 |       34 |      10|
 | easy-memout            |        5 |          4 |     600.6 |          0 |    1769.4 |    377.5 |    169.8 |     10286 |      513 |     159|
@@ -66,15 +67,15 @@ overhead for collecting dual LP solutions and file input and output to be about 
 included in the time reported for *SCIP+C*.
 
 Columns *inst* and *solved* refer to the number of instances in the subset and the number of instances solved to
-optimality or proven infeasibility.
-
-The last five columns report time for tightening and checking certificate files and the sizes of the certifcate
-files: before tightening, after tightening, and after running them through `gzip` compression.
+optimality or proven infeasibility by SCIP and SCIP+C, respectively.  The last five columns report time for tightening
+and checking certificate files and the sizes of the certifcate files: before tightening, after tightening, and after
+running them through `gzip` compression.
 
 The rows labeled *all* contain all instances of the easy and hard set, respectively. The *solved* rows comprise the
 instances solved by both SCIP versions.  The *memout* rows give averages over the instances where the certificate
-produced by SCIP-C hit the file size limit of 10GB.  The *timeout* row contains the remaining instances.  Averages were
-computed as shifted geometric means with a shift of 10 seconds and 1MB, respectively.
+produced by SCIP-C hit the file size limit of 10GB.  The *timeout* row contains the remaining instances.  Average
+running times and certificate file sizes were computed as shifted geometric means with a shift of 10 seconds and 1MB,
+respectively.
 
 Finally, in the following tables, we report instance-wise results on the time, nodes, and and memory required to produce
 and verify certificates.  Here, the final column states the range of primal and dual bound verified for the instance, or
