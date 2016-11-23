@@ -4,7 +4,11 @@ CFLAGS = -O1 -g -Wall -std=c++11 -Wshadow -W -Wmissing-declarations -Wpointer-ar
 all: viprchk vipr2html viprttn
 
 clean:
-	rm *.o
+	rm *.o viprchk vipr2html viprttn
+
+test: viprchk
+	./viprchk paper_eg3.vipr
+
 
 viprchk: viprchk.o 
 	$(COMP) $(CFLAGS) -o viprchk viprchk.o -lgmpxx -lgmp

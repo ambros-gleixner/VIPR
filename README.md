@@ -6,7 +6,7 @@
 
 > Kevin K.H. Cheung, Ambros Gleixner, and Daniel E. Steffy: [Verifying Integer Programming Results](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044), ZIB-Report 16-58, November 2016, [`urn:nbn:de:0297-zib-61044`](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044).
 
-This repository contains a detailed technical [specification of the certificate file format `.vipr`](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html), [code](code/) to compress, check, and display certificate files, and [supplementary information](experiments/) for the computational experiments conducted for the article above.
+This repository contains a detailed technical [specification of the certificate file format](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html), [software](code/) to check, display, and compress certificate files, and [supplementary information](experiments/) on the computational experiments conducted for the article above.
 
 
 ## Software

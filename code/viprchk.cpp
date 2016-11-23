@@ -226,7 +226,7 @@ int main( int argc, char *argv[] )
                                             / (double)CLOCKS_PER_SEC;
 
                            cout << endl << "Completed in " << cpu_dur 
-                                << " seconds (CPU)" << endl;
+                                << " seconds (CPU time)." << endl;
                         }
 
    return rs;
@@ -257,7 +257,7 @@ bool processRTP()
       {
          rtpType = RtpType::INFEAS;
 
-         cout << endl << "Need to verify infeasibility. " << endl;
+         cout << "Need to verify infeasibility. " << endl;
       }
       else if ( rtpTypeStr != "range" )
       {
@@ -729,7 +729,7 @@ bool processDER()
    
    pf >> numDer;
 
-   cout << "numDer = " << numDer << endl;
+   cout << "Number of constraints to be derived: " << numDer << endl << endl;
 
    for( int i = 0; i < numDer; ++i )
    {
