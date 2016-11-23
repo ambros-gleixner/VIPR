@@ -11,10 +11,10 @@ We created a modified version of the [exact rational MIP solver SCIP](http://sci
 al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6) and used it to compute certificates for several MIP instances
 from the literature.  Exact SCIP uses a hybrid of floating-point and exact rational arithmetic to efficiently compute
 exact solutions using a pure branch-and-bound algorithm.  In our experiments, the rational MIP solver uses
-CPLEX~12.6.0.0 as its underlying floating-point LP solver and a patched version of
-[QSopt\_ex~2.5.10](http://www.dii.uchile.cl/~daespino/ESolver_doc/main.html) as its underlying exact LP solver.  The
+CPLEX 12.6.0.0 as its underlying floating-point LP solver and a patched version of
+[QSopt_ex 2.5.10](http://www.dii.uchile.cl/~daespino/ESolver_doc/main.html) as its underlying exact LP solver.  The
 exact MIP solver supports several methods for computing valid dual bounds.  Our certificate printing functionality is
-currently supported by the \emph{project-and-shift} method (for dual feasible LP relaxations) and the \emph{exact LP}
+currently supported by the *project-and-shift* method (for dual feasible LP relaxations) and the *exact LP*
 method (for dual feasible LP relaxations and Farkas proofs).  For details on these methods see [Cook et
 al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6).  Future plans are to include certificate printing functionality
 in all dual bounding methods and release this in subsequent versions of exact SCIP.  Our developmental version is
@@ -24,7 +24,7 @@ CPUs running at 2.60GHz.  Jobs were run exclusively to ensure accurate time meas
 
 ## Computational results
 
-As a test bed, we considered the \emph{easy} and \emph{numerically difficult} (referred to here as `\emph{hard}') test
+As a test bed, we considered the *easy* and *numerically difficult* test
 sets from [Cook et al. 2013](http://dx.doi.org/10.1007/s12532-013-0055-6).  These test sets consist of publically
 available instances from well-known libraries including MIPLIB 2003, MIPLIB 3, MIPLIB 2010, COR@L, and Hans Mittelmann.
 
