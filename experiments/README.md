@@ -46,8 +46,8 @@ optimal solution or incorrectly accepted an infeasible solution in exact rationa
 the computational performance are given in [ZIB-Report 16-58](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044) and the
 following table:
 
-| Test set               | inst | SCIP solved | SCIP time (s) | SCIP solved | SCIP+C time (s) | ttn time (s) | chk time (s)  | raw size (MB) | ttn size (MB) | gz size (MB) |
-| :--------------------- | ---: | ----------: | ------------: | ----------: | --------------: | -----------: | ------------: | ------------: | ------------: | ----------:  |
+| Test set               | inst | SCIP solved | SCIP time (s) | SCIP+C solved | SCIP+C time (s) | ttn time (s) | chk time (s)  | raw size (MB) | ttn size (MB) | gz size (MB) |
+| :--------------------- | ---: | ----------: | ------------: | ------------: | --------------: | -----------: | ------------: | ------------: | ------------: | ----------:  |
 |                        |          |            |           |            |           |          |          |           |          |        |
 | easy-all               |       56 |         53 |      62.0 |         39 |     180.8 |     25.8 |     28.9 |       214 |       72 |      22|
 | easy-solved            |       39 |         39 |      23.2 |         39 |      48.0 |      9.6 |     13.4 |        77 |       34 |      10|
