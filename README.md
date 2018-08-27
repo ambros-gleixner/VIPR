@@ -4,7 +4,7 @@
 
 *VIPR* is new a software project to verify, in exact rational arithmetic, the correctness of results computed by mixed-integer linear programming solvers.  It is based on an elementary file format for LP-based branch-and-cut certificates proposed in the article
 
-> Kevin K.H. Cheung, Ambros Gleixner, and Daniel E. Steffy: [Verifying Integer Programming Results](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044), ZIB-Report 16-58, November 2016, [`urn:nbn:de:0297-zib-61044`](http://nbn-resolving.de/urn:nbn:de:0297-zib-61044).
+> Kevin K.H. Cheung, Ambros Gleixner, and Daniel E. Steffy: [Verifying Integer Programming Results](http://dx.doi.org/10.1007/978-3-319-59250-3_13). In: F. Eisenbrand and J. Koenemann, eds., Integer Programming and Combinatorial Optimization: 19th International Conference, IPCO 2017, pp. 148-160, 2017, [`doi:10.1007/978-3-319-59250-3_13`](http://dx.doi.org/10.1007/978-3-319-59250-3_13).
 
 This repository contains a detailed technical [specification of the certificate file format](http://rawgit.com/ambros-gleixner/VIPR/master/cert_spec_v1_0.html), [software](code/) to check, display, and compress certificate files, and [supplementary information](experiments/) on the computational experiments conducted for the article above.
 
