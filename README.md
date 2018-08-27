@@ -35,4 +35,4 @@ A small example is given as [paper_eg3.vipr](code/paper_eg3.vipr).  Certificates
 
 ## Software for generating `.vipr` certificates
 
-We have created an extension of the [exact rational version](http://scip.zib.de/#exact) of the [SCIP optimization software](http://scip.zib.de) that is able to produce certificates of MIP results.  It is currently under active development and is available by request from the authors of this project.  It will be included in future releases of the SCIP software.
+We have created an extension of the [exact rational version](http://scip.zib.de/#exact) of the [SCIP optimization software](http://scip.zib.de) that is able to produce certificates of MIP results.
