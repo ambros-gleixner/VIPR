@@ -2,22 +2,22 @@
 *
 *   Copyright (c) 2016 Kevin K. H. Cheung
 *
-*   Permission is hereby granted, free of charge, to any person obtaining a 
-*   copy of this software and associated documentation files (the "Software"), 
-*   to deal in the Software without restriction, including without limitation 
-*   the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-*   and/or sell copies of the Software, and to permit persons to whom the 
+*   Permission is hereby granted, free of charge, to any person obtaining a
+*   copy of this software and associated documentation files (the "Software"),
+*   to deal in the Software without restriction, including without limitation
+*   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*   and/or sell copies of the Software, and to permit persons to whom the
 *   Software is furnished to do so, subject to the following conditions:
 *
-*   The above copyright notice and this permission notice shall be included in 
+*   The above copyright notice and this permission notice shall be included in
 *   all copies or substantial portions of the Software.
 *
-*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
-*   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-*   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+*   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 *   DEALINGS IN THE SOFTWARE.
 *
 */
@@ -25,59 +25,52 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <set>
+#include <functional>
 
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
 
 using namespace std;
 
+enum Mark {
+   NONE,
+   TEMP,
+   PERM
+};
 
+class Node {
+
+ public:
+   vector<int> neededBy;
+   vector<int> needs;
+   streampos fpos;
+   Mark mark = NONE;
+   int newIdx = -1;
+};
+
+bool firstPass( ifstream &pf, int &numCon, vector<Node> &nodes, streampos &fposDer );
+bool writeReorderedDER( ifstream &pf, ofstream &optF, streampos fposDer, int &numCon, vector<Node> &nodes, vector<int> &L );
 
 int main(int argc, char *argv[])
 {
 
-   int fpos;
-   bool toTrim = false;
-   int trimmed = 0;
+   bool stat = false;
+   int numCon;
 
    ifstream pf; // input vipr file
-   ofstream tnf;  // tightened/trimmed file
+   streampos fposDer = -1;
+   ofstream optF; // optimized vipr file
 
-   vector<int> maxConIdx;
-   vector<int> newConIdx;
-   vector<set<int>> neededBy;
-   vector<set<int>> needs;
+   vector<Node> nodes; // node list for derived constraints
 
 
    int rs = -1;
    int farg = 1;
 
-   if( (argc == 1) || (argc > 3) )
+   if( argc != 2 )
    {
-      cerr << "Usage: " << argv[0] << " [-t] filename\n";
-      cerr << "  Specify option -t to trim unused derived constraints" << endl;
+      cerr << "Usage: " << argv[0] << " filename\n" << endl;
       return rs;
-   }
-   else if( argc == 3 )
-   {
-      if( string(argv[1]) == "-t" ) 
-      {
-         toTrim = true;
-         farg = 2;
-      }
-      else if( string(argv[2]) == "-t" )
-      { 
-         toTrim = true;
-         farg = 1;
-      }
-      else
-      {
-         cerr << "Usage: " << argv[0] << " [-t] filename\n";
-         cerr << "  Specify option -t to trim unused derived constraints" 
-              << endl;
-         return rs;
-      }  
    }
 
 
@@ -89,90 +82,150 @@ int main(int argc, char *argv[])
       return rs;
    }
 
-   string tnFname = string(argv[farg]) 
-                       + string(toTrim ? ".trimmed" : ".tightened");
 
-   tnf.open( tnFname.c_str());
+   string optFname = string(argv[farg]) + ".opt";
 
-   if ( tnf.fail() )
+   optF.open( optFname.c_str());
+
+   if ( optF.fail() )
    {
-      cerr << "Failed to open file " << tnFname << endl;
+      cerr << "Failed to open file " << optFname << endl;
+      return rs;
    }
-   else
+
+   if( !firstPass( pf, numCon, nodes, fposDer ) ) goto TERMINATE;
+
+
+#ifndef NDEBUG
+   for( size_t i = 0; i < nodes.size(); ++i )
+   {
+      cout << "Node " << i << endl;
+      cout << "  fpos = " << nodes[i].fpos << endl;
+      cout << "  needed by: ";
+      for( auto it : nodes[i].neededBy )
+          cout << it << " ";
+      cout << endl;
+      cout << "  needs: ";
+      for( auto it : nodes[i].needs )
+          cout << it << " ";
+      cout << endl;
+   }
+#endif
+
+   // Topological sort using DFS and using only the last constraint as root.
+   // Nodes not connected to the root are discarded
+
    {
 
-      auto _checkVersion = [](string ver)
+      vector<int> L;
+
+      std::function<bool (int)> _visit = [&nodes, &_visit, &L] (int n)
       {
-         bool rstat = false;
-         int major, minor;
-      
-         size_t pos = ver.find( "." );
-      
-         major = atoi( ver.substr( 0, pos ).c_str() );
-         minor = atoi( ver.substr( pos+1, ver.length()-pos ).c_str() );
-      
-         if ( (major == VERSION_MAJOR) && (minor <= VERSION_MINOR ) )
-         {
-            rstat = true;
-         }
-         else
-         {
-            cerr << "Version " << ver << " unsupported" << endl;
-         }
-      
-         return rstat;
+          bool rval = false;
+          if( nodes[n].mark == PERM) rval = true;
+          else if( nodes[n].mark == NONE)
+          {
+             rval = true;
+             nodes[n].mark = TEMP;
+             for( auto m : nodes[n].needs )
+             {
+                rval = _visit(m);
+                if( !rval ) break;
+             }
+             nodes[n].mark = PERM;
+             L.push_back( n );
+          }
+          return rval;
       };
 
-      auto _processSparseVec = [ &pf, &tnf, &newConIdx ](bool toPrint, bool useNewIdx)
+      stat = _visit( nodes.size() - 1 );
+
+      if( stat )
       {
-         bool rval = true;
-
-         string input, val;
-         int k, index;
-
-         pf >> input;
-         if (input == "OBJ")
+         for( size_t i = 0; i < L.size(); ++i )
          {
-            if (toPrint) tnf << " OBJ ";
+             nodes[ L[i] ].newIdx = i;
          }
-         else
+
+#ifndef NDEBUG
+         cout << "Nodes: " << endl;
+         for( size_t i = 0; i < nodes.size(); ++i )
          {
-            k = atoi(input.c_str());                
-
-            if (toPrint) tnf << " " << k;
-
-            for( int i = 0; i < k; ++i )
-            {
-               pf >> index >> val;
-               if( pf.fail() )
-               {
-                  cerr << "Failed reading coefficient " << i << endl;
-                  rval = false;
-            break;
-               }
-               else if (toPrint)
-               {
-       
-                  if ( (i+1) % 10 == 0) tnf << endl;
-
-                  if( useNewIdx ) index = newConIdx[index];
-
-                  tnf << "  " << index << " " << val;
-               }
-            }
+             if( nodes[ i ].newIdx < 0) continue;
+             cout << i <<  ": " << nodes[ i ].newIdx << " " << endl;
          }
-         return rval;
-      };
+         cout << endl;
+#endif
 
-      auto _updateMaxConIdx = [ &pf, &tnf, &maxConIdx, &needs, &neededBy ](int curConIdx)
+         if( !writeReorderedDER( pf, optF, fposDer, numCon, nodes, L ) )
+         {
+            goto TERMINATE;
+         }
+      }
+
+   }
+
+
+   stat = true;
+
+TERMINATE:
+   if( !stat ) {
+      cerr << "Error encountered while processing file" << endl;
+   }
+
+   optF.close();
+   pf.close();
+
+   return rs;
+}
+
+
+// reads the entire file and construct the digraph for reordering derived
+// constraints and outputs the vipr file up to right before DER.
+// returns the file position right after numDer.
+// returns -1 if an error has occurred.
+bool firstPass( ifstream &pf, int &numCon, vector<Node> &nodes, streampos &fposDer )
+{
+   string section, tmp, label;
+   char sense;
+   int con1, asm1, con2, asm2; // for reading unsplitting indices
+   int numBnd, numSol, numDer, idx, num;
+   bool stat = false;
+
+   auto _checkVersion = [](string ver)
+   {
+      bool rstat = false;
+      int major, minor;
+
+      size_t pos = ver.find( "." );
+
+      major = atoi( ver.substr( 0, pos ).c_str() );
+      minor = atoi( ver.substr( pos+1, ver.length()-pos ).c_str() );
+
+      if ( (major == VERSION_MAJOR) && (minor <= VERSION_MINOR ) )
       {
-         bool rval = true;
+         rstat = true;
+      }
+      else
+      {
+         cerr << "Version " << ver << " unsupported" << endl;
+      }
 
-         string input, val;
-         int k, index;
+      return rstat;
+   };
 
-         pf >> input;
-         k = atoi(input.c_str());                
+
+   auto _processSparseVec = [ &pf ]()
+   {
+      bool rval = true;
+
+      string input, val;
+      int k, index;
+
+      pf >> input;
+      if (input != "OBJ")
+      {
+         k = atoi(input.c_str());
 
          for( int i = 0; i < k; ++i )
          {
@@ -183,484 +236,552 @@ int main(int argc, char *argv[])
                rval = false;
          break;
             }
-            else 
-            {
-               maxConIdx[ index ] = curConIdx;
-               needs[curConIdx].insert( index );
-               neededBy[ index ].insert( curConIdx );
-            }
-         }
-         return rval;
-      };
-
-      string section, tmp, label;
-      char sense;
-      int num, idx, numCon, numSol, numDer, numBnd;
-      int numAll; // total number of contraints and derived constraints
-      int con1, asm1, con2, asm2; // for reading unsplitting indices
-      bool stat = false;
-
-      // Eat up comment lines, if any, until hitting VER
-      for(;;)
-      {
-         pf >> section;
-
-         if( pf.fail() ) goto TERMINATE;
-
-         if (section == "VER")
-         {
-            pf >> tmp;
-            if( _checkVersion( tmp ))
-            {
-               tnf << "VER " << tmp << endl;
-      break;
-            }
-            else
-            {
-               goto TERMINATE;
-            }
-         }
-         else if (section == "%")
-         {
-            getline( pf, tmp );
-            tnf << "% " << tmp << endl;
-         }
-         else
-         {
-            cerr << endl << "\% or VER expected. Read instead "
-                   << section << endl;
-            goto TERMINATE;
          }
       }
+      return rval;
+   };
 
+   auto _processLinCombSparseVec = [ &pf, &numCon, &nodes ]( int derConIdx )
+   {
+      bool rval = true;
 
-      pf >> section;
-      if( section != "VAR" )
-      {
-         cerr << "VAR expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
+      string input, val;
+      int k, index;
 
-      pf >> num;
-
-      if( pf.fail() ) goto TERMINATE;
-
-      tnf << "VAR " << num << endl;
-
-      for( int i = 0; i < num; ++i )
-      {
-         pf >> tmp; // read variable name
-         tnf << tmp << endl;
-      }
-
-
-      pf >> section;
-      if( section != "INT" )
-      {
-         cerr << "INT expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
-
-      pf >> num;
+      pf >> k;
 
       if( pf.fail() )
       {
-         cerr << "Failed to read number after INT" << endl;
-         goto TERMINATE;
+         cerr << "Failed to read number of coefficients" << endl;
+         rval = false;
       }
-
-      tnf << "INT " << num << endl;
-
-      for( int i = 0; i < num; ++i )
+      else
       {
-         pf >> idx;
-         if( pf.fail() ) goto TERMINATE;
-
-         if ((i+1) % 10 == 0) tnf << endl;
-         tnf << " " << idx;
-      }
-      tnf << endl;
-
-
-      pf >> section;
-      if( section != "OBJ" )
-      {
-         cerr << "OBJ expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
-
-      pf >> tmp;
-      if( (tmp != "min") && ( tmp != "max" ) )
-      {
-         cerr << "Unrecognized string after OBJ: " << tmp << endl;
-         goto TERMINATE;
-      }
-
-      tnf << "OBJ " << tmp << endl;
-
-      stat = _processSparseVec( true, false );
-      tnf << endl;
-
-      if( !stat ) goto TERMINATE;
-
-
-      pf >> section;
-      if( section != "CON" )
-      {
-         cerr << "CON expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
-
-      pf >> numCon >> numBnd;
-
-      tnf << "CON " << numCon << " " << numBnd << endl;
-
-      for( int i = 0; i < numCon; ++i )
-      {
-         pf >> label >> sense >> tmp;
-
-         tnf << label << " " << sense << " " << tmp;
-
-         stat = _processSparseVec( true, false );
-         tnf << endl;
-         if( !stat ) break;
-
-      }
-
-
-      pf >> section;
-      if( section != "RTP" )
-      {
-         cerr << "RTP expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
-
-      pf >> tmp;
-
-      tnf << "RTP " << tmp;
-      if( tmp == "range" )
-      {
-         pf >> tmp; // lower bound
-         tnf << " " << tmp;
-
-         pf >> tmp; // upper bound
-         tnf << " " << tmp;
-      }
-      else if ( tmp != "infeas" )
-      {
-         cerr << "Unrecognized string after RTP: " << tmp << endl;
-         goto TERMINATE;
-      }
-
-      tnf << endl;
-
-      pf >> section;
-      if( section != "SOL" )
-      {
-         cerr << "SOL expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
-
-      pf >> numSol;
-
-      tnf << "SOL " << numSol << endl;
-
-      if (numSol)
-      {
-         for( int i = 0; i < numSol; ++i ) {
-            pf >> label;
-            tnf << label;
-            stat = _processSparseVec( true, false );
-            tnf << endl;
-         }
-      }
-
-
-      pf >> section;
-      if( section != "DER" )
-      {
-         cerr << "DER expected. Read instead: " << section << endl;
-         goto TERMINATE;
-      }
-
-      pf >> numDer;
-
-      numAll = numCon + numDer;
-      maxConIdx.resize( numAll );
-      needs.resize( numAll );
-      neededBy.resize( numAll );
-
-      if( toTrim ) newConIdx.resize( numAll );
-
-      for( auto& it : maxConIdx )
-         it = 0;
-      maxConIdx.back() = numAll - 1; // the last derived constraint is NEVER redundant
-      neededBy.back().insert( numAll - 1 );
-
-      fpos = pf.tellg();
-
-      // Go through derived constraints and set max constraint indices
-      for( int i = 0; i < numDer; ++i )
-      {
-         int conIdx = i + numCon;
-
-         pf >> label >> sense >> tmp;
-
-         stat = _processSparseVec( false, false );
-         if( !stat ) 
+         for( int i = 0; i < k; ++i )
          {
-            cerr << "Error processing " << label << endl;
-            goto TERMINATE;
+            pf >> index >> val;
+            if( pf.fail() )
+            {
+               cerr << "Failed reading coefficient " << i << endl;
+               rval = false;
+         break;
+            }
+            else if( index >= numCon )
+            {
+               index -= numCon;
+               nodes[ derConIdx ].needs.push_back( index );
+               nodes[ index ].neededBy.push_back( derConIdx );
+            }
          }
+      }
+      return rval;
+   };
 
+
+   // Eat up comment lines, if any, until hitting VER
+   for(;;)
+   {
+      pf >> section;
+
+      if( pf.fail() ) goto TERMINATE;
+
+      if (section == "VER")
+      {
          pf >> tmp;
-         if( tmp != "{" )
+         if( _checkVersion( tmp ))
          {
-            cerr << "'{' expected.   Reading instead: " << tmp << " in " 
-                 << label << endl;
-            goto TERMINATE;
+   break;
          }
          else
          {
-            pf >> tmp;
-            if( tmp == "asm" )
-            {
-               pf >> tmp;
-               if( tmp != "}")
-               {
-                  cerr << "'}' expected. Read instead: " << tmp << endl;
-                  goto TERMINATE;
-               }
-            }
-            else if( tmp == "lin" )
-            {
-               stat = _updateMaxConIdx( conIdx );
-               if( stat )
-               {
-                  pf >> tmp;
-                  if( tmp != "}")
-                  {
-                     cerr << "'}' expected. Read instead: " << tmp << endl;
-                     goto TERMINATE;
-                  }
-               }
-            }
-            else if( tmp == "rnd" )
-            {
-               stat = _updateMaxConIdx( conIdx );
-               if( stat )
-               {
-                  pf >> tmp;
-                  if( tmp != "}")
-                  {
-                     cerr << "'}' expected. Read instead: " << tmp << endl;
-                     goto TERMINATE;
-                  }
-               }
-            }
-            else if( tmp == "uns" )
-            {
-               pf >> con1 >> asm1 >> con2 >> asm2;
-               if( pf.fail() )
-               {
-                  goto TERMINATE;
-               }
-               else
-               {
-                  maxConIdx[con1] = conIdx;
-                  maxConIdx[con2] = conIdx;
-                  maxConIdx[asm1] = conIdx;
-                  maxConIdx[asm2] = conIdx;
-                  needs[conIdx].insert( con1 );
-                  needs[conIdx].insert( con2 );
-                  needs[conIdx].insert( asm1 );
-                  needs[conIdx].insert( asm2 );
-                  neededBy[ con1 ].insert( conIdx );
-                  neededBy[ con2 ].insert( conIdx );
-                  neededBy[ asm1 ].insert( conIdx );
-                  neededBy[ asm2 ].insert( conIdx );
-
-                  pf >> tmp;
-                  if( tmp != "}")
-                  {
-                     cerr << "'}' expected. Read instead: " << tmp << endl;
-                     goto TERMINATE;
-                  }
-               }
-            }
-            else
-            {
-               cerr << "Unrecognized reason type: " << tmp << endl;
-               goto TERMINATE;
-            }
-
-         }
-
-         pf >> idx; // read off current max con index and ignore it
-
-      }
-
-
-      if( toTrim ) 
-      { 
-         // process backwards to peel of neededBy indices
-         for( auto i = int(needs.size()) - 1; i >= numCon; --i)
-         {
-            if( neededBy[i].empty() )
-            {
-               for( auto it : needs[i] )
-               {
-                   neededBy[ it ].erase( neededBy[ it ].find( i ) );
-               }
-            }
-         }
-
-         idx = 0;
-         for( size_t i = 0; i < neededBy.size(); ++i )
-         {
-            newConIdx[i] = idx;
-            if( (i < size_t(numCon)) || !neededBy[i].empty() ) {
-                ++idx;
-            }
-         }
-         trimmed = numCon + numDer - idx;
-      }
-
-      rs = 0;
-
-      pf.seekg( fpos );
-
-      tnf << "DER " << numDer - trimmed << endl;
-
-      for( int i = 0; i < numDer; ++i )
-      {
-         int conIdx = i + numCon;
-         bool toPrint = (!toTrim || !neededBy[ conIdx ].empty());
-
-         pf >> label >> sense >> tmp;
-
-         if (toPrint) tnf << label << " " << sense << " " << tmp;
-
-         stat = _processSparseVec( toPrint, toTrim );
-         if( !stat ) 
-         {
-            cerr << "Error processing " << label << endl;
             goto TERMINATE;
          }
-
-         pf >> tmp;
-         if ( toPrint ) tnf << " " << tmp;
-         if( tmp != "{" )
-         {
-            cerr << "'{' expected.   Reading instead: " << tmp << " in " 
-                 << label << endl;
-            goto TERMINATE;
-         }
-         else
-         {
-
-            pf >> tmp;
-            if( toPrint ) tnf << " " << tmp;
-            if( tmp == "asm" )
-            {
-               pf >> tmp;
-               if( toPrint ) tnf << " " << tmp;
-               
-               if( tmp != "}")
-               {
-                  cerr << "'}' expected. Read instead: " << tmp << endl;
-                  goto TERMINATE;
-               }
-            }
-            else if( tmp == "lin" )
-            {
-               stat = _processSparseVec( toPrint, toTrim );
-               if( stat )
-               {
-                  pf >> tmp;
-                  if( toPrint ) tnf << " " << tmp;
-                  if( tmp != "}")
-                  {
-                     cerr << "'}' expected. Read instead: " << tmp << endl;
-                     goto TERMINATE;
-                  }
-               }
-            }
-            else if( tmp == "rnd" )
-            {
-               stat = _processSparseVec( toPrint, toTrim );
-               if( stat )
-               {
-                  pf >> tmp;
-                  if( toPrint ) tnf << " " << tmp;
-                  if( tmp != "}")
-                  {
-                     cerr << "'}' expected. Read instead: " << tmp << endl;
-                     goto TERMINATE;
-                  }
-               }
-            }
-            else if( tmp == "uns" )
-            {
-               pf >> con1 >> asm1 >> con2 >> asm2;
-
-               if( toTrim )
-               {
-                  con1 = newConIdx[con1]; asm1 = newConIdx[asm1];
-                  con2 = newConIdx[con2]; asm2 = newConIdx[asm2];
-               }
-               if( toPrint )
-               {
-                  tnf << " " << con1 << " " << asm1;
-                  tnf << "  " << con2 << " " << asm2;
-               }
-               if( pf.fail() )
-               {
-                  goto TERMINATE;
-               }
-               else
-               {
-                  pf >> tmp;
-                  if( toPrint ) tnf << " " << tmp;
-                  if( tmp != "}")
-                  {
-                     cerr << "'}' expected. Read instead: " << tmp << endl;
-                     goto TERMINATE;
-                  }
-               }
-            }
-            else
-            {
-               cerr << "Unrecognized reason type: " << tmp << endl;
-               goto TERMINATE;
-            }
-
-         }
-
-         pf >> idx; // read off current max con index and ignore it
-         if( toPrint )
-         {
-            idx = maxConIdx[ conIdx ];
-            if( toTrim ) idx = newConIdx[ idx ];
-            tnf << " " << idx << endl;
-         }
-
       }
-
-      if( toTrim )
+      else if (section == "%")
       {
-          cout << "Removed " << trimmed << " of " << numDer << " derived constraints" 
-               << endl;
+         getline( pf, tmp );
       }
-
-TERMINATE:
-      if( !stat ) {
-         cerr << "Error encountered while processing file" << endl;
+      else
+      {
+         cerr << endl << "\% or VER expected. Read instead "
+                << section << endl;
+         goto TERMINATE;
       }
-      tnf.close();
    }
 
-   pf.close();
 
-   return rs;
+   pf >> section;
+   if( section != "VAR" )
+   {
+      cerr << "VAR expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   pf >> num;
+
+   if( pf.fail() ) goto TERMINATE;
+
+   for( int i = 0; i < num; ++i )
+   {
+      pf >> tmp; // read variable name
+   }
+
+
+   pf >> section;
+   if( section != "INT" )
+   {
+      cerr << "INT expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   pf >> num;
+
+   if( pf.fail() )
+   {
+      cerr << "Failed to read number after INT" << endl;
+      goto TERMINATE;
+   }
+
+   for( int i = 0; i < num; ++i )
+   {
+      pf >> idx;
+      if( pf.fail() ) goto TERMINATE;
+
+   }
+
+   pf >> section;
+   if( section != "OBJ" )
+   {
+      cerr << "OBJ expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   pf >> tmp;
+   if( (tmp != "min") && ( tmp != "max" ) )
+   {
+      cerr << "Unrecognized string after OBJ: " << tmp << endl;
+      goto TERMINATE;
+   }
+
+   if( ! _processSparseVec() ) goto TERMINATE;
+
+
+   pf >> section;
+   if( section != "CON" )
+   {
+      cerr << "CON expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   pf >> numCon >> numBnd;
+
+   for( int i = 0; i < numCon; ++i )
+  {
+      pf >> label >> sense >> tmp;
+
+      if( !_processSparseVec() ) goto TERMINATE;
+
+   }
+
+
+   pf >> section;
+   if( section != "RTP" )
+   {
+      cerr << "RTP expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   pf >> tmp;
+
+   if( tmp == "range" )
+   {
+      pf >> tmp; // lower bound
+
+      pf >> tmp; // upper bound
+   }
+   else if ( tmp != "infeas" )
+   {
+      cerr << "Unrecognized string after RTP: " << tmp << endl;
+      goto TERMINATE;
+   }
+
+   pf >> section;
+   if( section != "SOL" )
+   {
+      cerr << "SOL expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   pf >> numSol;
+
+   if (numSol)
+   {
+      for( int i = 0; i < numSol; ++i ) {
+         pf >> label;
+         if( !_processSparseVec() ) goto TERMINATE;
+
+      }
+   }
+
+
+   pf >> section;
+   if( section != "DER" )
+   {
+      cerr << "DER expected. Read instead: " << section << endl;
+      goto TERMINATE;
+   }
+
+   fposDer = pf.tellg(); // remember where DER begins for second pass to
+                         // write derived constraints to file
+
+   pf >> numDer;
+
+#ifndef NDEBUG
+   cout << "numCon = " << numCon << endl;
+   cout << "numDer = " << numDer << endl;
+   cout << "fposDer = " << fposDer << endl;
+#endif
+
+   nodes.resize( numDer );
+
+   for(auto i = 0; i < numDer; ++i )
+   {
+
+      nodes[i].fpos = pf.tellg();
+
+      pf >> label >> sense >> tmp;
+
+      if( pf.fail() )
+      {
+         cerr << "Error reading " << label << endl;
+         goto TERMINATE;
+      }
+
+      stat = _processSparseVec(); // just eat up the derived constraint
+      if( !stat )
+      {
+         cerr << "Error processing " << label << endl;
+         goto TERMINATE;
+      }
+
+      pf >> tmp;
+
+      if( pf.fail() )
+      {
+         cerr << "Error reading reason for " << label << endl;
+         goto TERMINATE;
+      }
+
+      if( tmp != "{" )
+      {
+         cerr << "'{' expected.   Reading instead: " << tmp << " in "
+              << label << endl;
+         goto TERMINATE;
+      }
+      else
+      {
+         pf >> tmp;
+         if( pf.fail() )
+         {
+            cerr << "Error reading reason type for " << label << endl;
+            goto TERMINATE;
+         }
+         if( tmp == "asm" || tmp == "sol" )
+         {
+            pf >> tmp;
+            if( tmp != "}")
+            {
+               cerr << "'}' expected. Read instead: " << tmp << endl;
+               goto TERMINATE;
+            }
+         }
+         else if( tmp == "lin" )
+         {
+            stat = _processLinCombSparseVec( i );
+            if( stat )
+            {
+               pf >> tmp;
+               if( tmp != "}")
+               {
+                  cerr << "'}' expected. Read instead: " << tmp << endl;
+                  goto TERMINATE;
+               }
+            }
+         }
+         else if( tmp == "rnd" )
+         {
+            stat = _processLinCombSparseVec( i );
+            if( stat )
+            {
+               pf >> tmp;
+               if( tmp != "}")
+               {
+                  cerr << "'}' expected. Read instead: " << tmp << endl;
+                  goto TERMINATE;
+               }
+            }
+         }
+         else if( tmp == "uns" )
+         {
+            pf >> con1 >> asm1 >> con2 >> asm2;
+            if( pf.fail() )
+            {
+               cerr << "Error reading unsplit indices for " << label << endl;
+               goto TERMINATE;
+            }
+            else
+            {
+
+               auto _insertArc = [ &nodes ](int tail, int head)
+               {
+                   nodes[ tail ].neededBy.push_back( head );
+                   nodes[ head ].needs.push_back( tail );
+               };
+               if( con1 >= numCon ) _insertArc( con1 - numCon, i );
+               if( con2 >= numCon ) _insertArc( con2 - numCon, i );
+               if( asm1 >= numCon ) _insertArc( asm1 - numCon, i );
+               if( asm2 >= numCon ) _insertArc( asm2 - numCon, i );
+
+               pf >> tmp;
+               if( tmp != "}")
+               {
+                  cerr << "'}' expected. Read instead: " << tmp << endl;
+                  goto TERMINATE;
+               }
+            }
+         }
+         else
+         {
+            cerr << "Unrecognized reason type: " << tmp << endl;
+            goto TERMINATE;
+         }
+
+      }
+
+      pf >> idx; // read off current max con index and ignore it
+
+   }
+
+   stat = true;
+
+
+TERMINATE:
+
+   return stat;
 }
+
+bool writeReorderedDER( ifstream &pf, ofstream &optF, streampos fposDer, int &numCon, vector<Node> &nodes, vector<int> &L )
+{
+   string section, tmp, label;
+   char sense;
+   int con1, asm1, con2, asm2; // for reading unsplitting indices
+   bool stat = false;
+
+   auto _processSparseVec = [ &pf, &optF, &numCon, &nodes ]( bool useNewIdx )
+   {
+      bool rval = true;
+
+      string input, val;
+      int k, index;
+
+      pf >> input;
+      if (input == "OBJ")
+      {
+         optF << " OBJ ";
+      }
+      else
+      {
+         k = atoi(input.c_str());
+
+         optF << " " << k;
+
+         for( int i = 0; i < k; ++i )
+         {
+            pf >> index >> val;
+            if( pf.fail() )
+            {
+               cerr << "Failed reading coefficient " << i << endl;
+               rval = false;
+         break;
+            }
+            else
+            {
+               if ( (i+1) % 20 == 0) optF << endl;
+
+               if( useNewIdx && index >= numCon )
+               {
+                  index -= numCon;
+                  index = nodes[ index ].newIdx + numCon;
+               }
+
+               optF << "  " << index << " " << val;
+            }
+         }
+      }
+      return rval;
+   };
+
+
+   pf.seekg( 0 );
+   // copy up to fposDer
+   auto inStream = istreambuf_iterator<char>(pf);
+   auto outStream = ostreambuf_iterator<char>(optF);
+
+   for(int i = 0; i < fposDer; ++i)
+   {
+      *outStream++ = *inStream++;
+   }
+
+   // copy_n(istreambuf_iterator<char>(pf), fposDer, ostreambuf_iterator<char>(optF));  This doesn't compile in Ubuntu!!!
+
+   optF << " " << L.size() << endl;
+
+   for(auto i : L )
+   {
+
+      pf.seekg( nodes[ i ].fpos );
+
+      pf >> label >> sense >> tmp;
+      if( pf.fail() )
+      {
+         cerr << "Error reading " << label << endl;
+         goto TERMINATE;
+      }
+
+      optF << label << " " << sense << " " << tmp;
+
+      stat = _processSparseVec( false );
+      if( !stat )
+      {
+         cerr << "Error processing " << label << endl;
+         goto TERMINATE;
+      }
+
+      pf >> tmp;
+      if( pf.fail() )
+      {
+         cerr << "Error reading reason for " << label << endl;
+         goto TERMINATE;
+      }
+
+      optF << " " << tmp;
+
+      if( tmp != "{" )
+      {
+         cerr << "'{' expected.   Reading instead: " << tmp << " in "
+              << label << endl;
+         goto TERMINATE;
+      }
+      else
+      {
+         pf >> tmp;
+         if( pf.fail() )
+         {
+            cerr << "Error reading reason type for " << label << endl;
+            goto TERMINATE;
+         }
+
+         optF << " " << tmp;
+         if( tmp == "asm" || tmp == "sol" )
+         {
+            pf >> tmp;
+            if( tmp != "}")
+            {
+               cerr << "'}' expected. Read instead: " << tmp << endl;
+               goto TERMINATE;
+            }
+            optF << " " << tmp;
+         }
+         else if( tmp == "lin" )
+         {
+            stat = _processSparseVec( true );
+            if( stat )
+            {
+               pf >> tmp;
+               if( tmp != "}")
+               {
+                  cerr << "'}' expected. Read instead: " << tmp << endl;
+                  goto TERMINATE;
+               }
+               optF << " " << tmp;
+            }
+         }
+         else if( tmp == "rnd" )
+         {
+            stat = _processSparseVec( true );
+            if( stat )
+            {
+               pf >> tmp;
+               if( tmp != "}")
+               {
+                  cerr << "'}' expected. Read instead: " << tmp << endl;
+                  goto TERMINATE;
+               }
+               optF << " " << tmp;
+            }
+         }
+         else if( tmp == "uns" )
+         {
+            pf >> con1 >> asm1 >> con2 >> asm2;
+            if( pf.fail() )
+            {
+               cerr << "Error reading unsplit indices for " << label << endl;
+               goto TERMINATE;
+            }
+            else
+            {
+
+               auto _printNewIdx = [ &nodes, &optF, &numCon ](int idx)
+               {
+                   if( idx >= numCon ) idx = nodes[idx - numCon].newIdx + numCon;
+                   optF << " " << idx;
+               };
+               _printNewIdx( con1 );
+               _printNewIdx( asm1 );
+               _printNewIdx( con2 );
+               _printNewIdx( asm2 );
+
+               pf >> tmp;
+               if( tmp != "}")
+               {
+                  cerr << "'}' expected. Read instead: " << tmp << endl;
+                  goto TERMINATE;
+               }
+               optF << " " << tmp;
+            }
+         }
+         else
+         {
+            cerr << "Unrecognized reason type: " << tmp << endl;
+            goto TERMINATE;
+         }
+
+      }
+
+      pf >> tmp; // read off current max con index and ignore it
+
+      auto _maxIdx = [ &nodes, &numCon ](int m)
+      {
+         int maxIdx = -1;
+         for( auto n : nodes[m].neededBy )
+         {
+            int newIdx = nodes[n].newIdx;
+            if( newIdx > maxIdx ) maxIdx = newIdx;
+
+         }
+         if (maxIdx != -1) maxIdx += numCon;
+         return maxIdx;
+      };
+
+      optF << " " << _maxIdx( i ) << endl;
+
+   }
+
+   stat = true;
+
+
+TERMINATE:
+
+   return stat;
+}
+
