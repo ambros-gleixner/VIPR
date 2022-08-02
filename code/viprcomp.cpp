@@ -1158,7 +1158,7 @@ static bool completeWeakDomination(DSVectorRational &row, string &consense, Rati
          // cons is == -> this can currently not be handled, would need to be split in two parts
          else if(consense == "E")
          {
-            cerr << "  cannot complete weak dominated equality constraints" << endl;
+            cerr << "  cannot complete weakly dominated equality constraints" << endl;
             certificateFile.ignore(numeric_limits<streamsize>::max(), '\n');
             return false;
          }
@@ -1234,7 +1234,7 @@ static bool completeWeakDomination(DSVectorRational &row, string &consense, Rati
          // cons is == -> this can currently not be handled, would need to be split in two parts
          else if(consense == "E")
          {
-            cerr << "  cannot complete weak dominated equality constraints" << endl;
+            cerr << "  cannot complete weakly dominated equality constraints" << endl;
             certificateFile.ignore(numeric_limits<streamsize>::max(), '\n');
             return false;
          }
