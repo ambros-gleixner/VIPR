@@ -83,7 +83,7 @@ A `reason` associated with a constraint with constraint index `idx` must have on
 - { sol }
 
 #### New in version 1.1: incomplete keywords
-- { lin weak {$n$ $t_1$ $j_1$ $\nu_1$ $\cdots$ $t_n$ $j_n$ $\nu_n$} $p$  $i_1$  $\lambda_1$ $\cdots$  $i_p$  $\lambda_p$ } where $p, \lambda, i$ are the same as for `lin`, except that the linear compbination only weakly dominates the associated constraint. The additional inner brackets describe a set of local bounds to be used during completion of this constraint. $t_1,\cdots,t_n$ are either $U$ (upper bound) or $L$ (lower bound). $j_1,\cdots,j_n$ are variable indices, and $nu_1,\cdots,nu_n$ are the certificate line indices where the corresponding bound constraint can be found. Alternatively, the inner brackets can be {0} to use global bounds.
+- { lin weak {$n$ $t_1$ $j_1$ $\nu_1$ $\cdots$ $t_n$ $j_n$ $\nu_n$} $p$  $i_1$  $\lambda_1$ $\cdots$  $i_p$  $\lambda_p$ } where $p, \lambda, i$ are the same as for `lin`, except that the linear compbination only weakly dominates the associated constraint. The additional inner brackets describe a set of local bounds to be used during completion of this constraint. $t_1,\cdots,t_n$ are either $U$ (upper bound) or $L$ (lower bound). $j_1,\cdots,j_n$ are variable indices, and $\nu_1,\cdots,\nu_n$ are the certificate line indices for the corresponding bound constraints. Alternatively, the inner brackets can be {0} to use global bounds.
 - { lin incomplete $i_1, \cdots i_n$ } where $i_1, \cdots i_n$ are constraint indices that are active, such that an exact linear program should be solved using the model constraints as well as these additional constraint to find correct multipliers to prove validity of the associated constraint.
 
 ## File format
