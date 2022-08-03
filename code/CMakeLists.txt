@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3.0)
 
 # set the project name and version
-project(VIPR VERSION 1.0)
+project(VIPR VERSION 1.1)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
@@ -24,7 +24,6 @@ option(VIPRCOMP "Use viprcomp" ON)
 
 # add executables
 add_executable(viprttn viprttn.cpp)
-add_executable(viprwidth viprwidth.cpp)
 add_executable(vipr2html vipr2html.cpp)
 add_executable(viprchk viprchk.cpp)
 

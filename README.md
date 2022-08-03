@@ -6,9 +6,9 @@
 
 > Kevin K.H. Cheung, Ambros Gleixner, and Daniel E. Steffy: [Verifying Integer Programming Results](http://dx.doi.org/10.1007/978-3-319-59250-3_13). In: F. Eisenbrand and J. Koenemann, eds., Integer Programming and Combinatorial Optimization: 19th International Conference, IPCO 2017, pp. 148-160, 2017, [`doi:10.1007/978-3-319-59250-3_13`](http://dx.doi.org/10.1007/978-3-319-59250-3_13).
 
-This repository contains a detailed technical specification of the certificate file format in [Version 1.0](cert_spec_v1_0.html) and [Version 1.1](cert_spec_v1_1.html), [software](code/) to check, display, compress, and complete certificate files, and [supplementary information](experiments/) on the computational experiments conducted for the article above.
+This repository contains a detailed technical specification of the certificate file format in [Version 1.0](cert_spec_v1_0.md) and [Version 1.1](cert_spec_v1_1.md), [software](code/) to check, display, compress, and complete certificate files, and [supplementary information](experiments/) on the computational experiments conducted for the article above.
 
-The specification and handling of incomplete derivations in [Version 1.1](cert_spec_v1_1.html) was added for the purpose of the paper
+The specification and handling of incomplete derivations in [Version 1.1](cert_spec_v1_1.md) was added for the purpose of the paper
 
 > TODO add arxiv link to preprint
 
@@ -16,12 +16,11 @@ Please cite both publications if you use VIPR in your work.
 
 ## Software
 
-*VIPR* currently provides five C++ scripts, each being called from a terminal together with an appropriate `.vipr` certificate file:
+*VIPR* currently provides four C++ scripts, each being called from a terminal together with an appropriate `.vipr` certificate file:
 
 - `vprchck`: A program that verifies mixed-integer linear programming certificate files specified in the `.vipr` file format.
 - `vipr2html`: A program that converts `.vipr` certificate files to a human readable HTML format (not recommended for large files).
 - `viprttn`: A program that tightens and improves `.vipr` files, potentially reducing their size and allowing for easier checking.
-- `viprwidth`: A program that returns the cutwidth on derived constraints.
 - `viprcomp`: A program that completes incomplete `.vipr` certificate files using the exact LP solver `SoPlex`.
 
 ## File format specification `.vipr`
@@ -66,24 +65,11 @@ If it is not desired to compile `viprcomp`, it can be turned off in the `cmake <
 
 After installing, run any of the vipr scripts as `./<viprscript> <path/to/.vipr-file>`.
 
-The script `viprcomp` is the only one with additional options set verbosity of SoPlex and the script itself at runtime.
-By default, both verbosity settings are set to off.
-To change this use the command `./viprcomp <SoPlex verbosity level> <Debugmode ON/OFF> <path/to/.viprfile>`.
-Both settings are optional and may be left out.
+The script `viprcomp` is the only one with the additional option to set verbosity levels as well as the option to disable SoPlex.
+The verbosity level of SoPlex can be set to levels 0-5 using the flag `--vebosity=<level>`. Additional debug output can be enabled using `--debugmode=on`.
+If it is known that only weak derivations need to be completed, perfomance can be improved by setting `--soplex=off`.
 
-SoPlex options are
-
-    0   Error (default)
-    1   Warning
-    2   Debug
-    3   Normal
-    4   High
-    5   Full
-
-For further information, consult the [SoPlex Documentation](https://soplex.zib.de/doc/html/).
-
-Debugmode is either set to `ON` or `OFF` (default).
-
+An example call for the completion script: `./viprcomp --verbosity=1 --debugmode=off --soplex=on <path/to/.vipr-file>`.
 
 ## Developers and contributors
 
