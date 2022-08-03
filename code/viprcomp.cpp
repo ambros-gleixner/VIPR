@@ -1,6 +1,6 @@
 /*
 *
-*   Copyright (c) 2021 Fabian Frickenstein
+*   Copyright (c) 2022 Zuse Institute Berlin
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a
 *   copy of this software and associated documentation files (the "Software"),
@@ -38,8 +38,7 @@ using namespace soplex;
 
 // sparse boolean vectors
 typedef map<int, bool> SVectorBool;
-
-// Sparse vectors of rational numbers as maps
+typedef shared_ptr<DSVectorRational> DSVectorPointer;
 class SVectorRat : public map<int, Rational>
 {
    public:
@@ -61,10 +60,12 @@ class SVectorRat : public map<int, Rational>
       bool _compact = false;
 };
 
+
 // Globals
 ifstream certificateFile;
 ofstream completedFile;
 bool debugmode = false;
+bool usesoplex = true;
 int numberOfVariables = 0; // number of variables
 int numberOfIntegers = 0; // number of integers
 int numberOfConstraints = 0; // number of constraints
@@ -75,11 +76,11 @@ long currentDerivation = 0; // current derivation
 DSVectorRational dummycol(0); // SoPlex placeholder column
 vector<string> variables; // variable names
 vector<bool> isInt; // integer variable indices
-DSVectorRational ObjCoeff(0); // sparse vector of objective coefficients
+DSVectorPointer ObjCoeff(make_shared<DSVectorRational>()); // sparse vector of objective coefficients
 
 vector<long> currentlyActiveDerivations; // tracks curr. active derivations (for completing lin)
 
-vector<tuple<DSVectorRational, Rational, int>> constraints; // all constraints, including derived ones
+vector<tuple<DSVectorPointer, Rational, int>> constraints; // all constraints, including derived ones
 
 struct lpIndex { long idx; bool isRowId; };
 bool operator< ( lpIndex a, lpIndex b ) {
@@ -109,7 +110,7 @@ bool processSOL();
 bool processDER(SoPlex &workinglp);
 bool getConstraints(SoPlex &workinglp, string &consense, Rational &rhs, int &activeConstraint);
 bool derisasm();
-bool derislin(SoPlex &workinglp, DSVectorRational &row, string &consense, Rational &rhs, string &label);
+bool derislin(SoPlex &workinglp, DSVectorPointer row, string &consense, Rational &rhs, string &label);
 bool derisrnd();
 bool derisuns();
 bool derissol();
@@ -142,23 +143,141 @@ static void processGlobalBoundChange(Rational rhs, Rational boundmult, int varin
    }
 }
 
+static
+void printUsage(const char* const argv[], int idx)
+{
+   const char* usage =
+      "general options:\n"
+      "  --soplex=on/off       use soplex to complete derivations? needs to be on if incomplete derivations in certificate file;\
+      \n                        turn off to boost performance if only weak derivations are present.\n"
+      "  --debugmode=on/off    enable extra debug output from viprcomp\n"
+      "  --verbosity=<level>   set verbosity level inside SoPlex\n"
+      "\n";
+   if(idx <= 0)
+      cerr << "missing input file\n\n";
+   else
+      cerr << "invalid option \"" << argv[idx] << "\"\n\n";
+
+   cerr << "usage: " << argv[0] << " " << "[options] <certificateFile>\n"
+             << "  <certificateFile>               .vipr file to be completed\n\n"
+             << usage;
+}
+
 // Main function
 int main(int argc, char *argv[])
 {
    int returnStatement = -1;
+   int optidx;
+   const char* certificateFileName;
+   int verbosity = 0;
 
-   if( argc < 2 || argc > 4)
+   if( argc == 0 )
    {
-      cerr << "Usage: " << argv[0]
-      << " <certificate filename> + SoPlex verbosity (optional) + Debugmode ON/OFF (optional)" << endl;
-      return returnStatement;
+      printUsage(argv, -1);
+      return 1;
    }
 
-   certificateFile.open(argv[1]);
+   // read arguments from command line
+   for(optidx = 1; optidx < argc; optidx++)
+   {
+      char* option = argv[optidx];
+
+      // we reached <certificateFile>
+      if(option[0] != '-')
+      {
+         certificateFileName = argv[optidx];
+         continue;
+      }
+
+      // option string must start with '-', must contain at least two characters, and exactly two characters if and
+      // only if it is -x, -y, -q, or -c
+      if(option[0] != '-' || option[1] == '\0'
+            || ((option[2] == '\0') != (option[1] == 'x' || option[1] == 'X' || option[1] == 'y'
+                                        || option[1] == 'Y' || option[1] == 'q' || option[1] == 'c')))
+      {
+         printUsage(argv, optidx);
+         return 1;
+      }
+
+      switch(option[1])
+      {
+      case '-' :
+         option = &option[2];
+
+         // --arithmetic=<value> : choose base arithmetic type (0 - double, 1 - quadprecision, 2 - higher multiprecision)
+         // only need to do something here if multi or quad, the rest is handled in runSoPlex
+         if(strncmp(option, "verbosity=", 10) == 0)
+         {
+            char* str = &option[10];
+            if( isdigit(option[10]))
+            {
+               verbosity = atoi(str);
+               if( verbosity < 0 || verbosity > 5 )
+               {
+                  cerr << "Verbosity level outside range 0 to 5. Read " << verbosity << " instead." << endl;
+                  printUsage(argv, optidx);
+                  return 1;
+               }
+            }
+         }
+         // set precision
+         else if(strncmp(option, "debugmode=", 10) == 0)
+         {
+            char* str = &option[10];
+            // Set Debugmode
+            if( string(str) == "on")
+            {
+               debugmode = true;
+               cout << "Debugmode turned on." << endl;
+            }
+            else if( string(str) == "off")
+            {
+               debugmode = false;
+               cout << "Debugmode turned off." << endl;
+            }
+            else
+            {
+               cout << "Unknown input for debug settings (on/off expected). Read "
+               << string(str) << " instead" << endl;
+               cout << "Continue with default setings (debugmode off)" << endl;
+            }
+         }
+         // set precision
+         else if(strncmp(option, "soplex=", 7) == 0)
+         {
+            char* str = &option[7];
+            // Set Debugmode
+            if( string(str) == "on")
+            {
+               usesoplex = true;
+               cout << "SoPlex turned on." << endl;
+            }
+            else if( string(str) == "off")
+            {
+               usesoplex = false;
+               cout << "SoPlex turned on." << endl;
+            }
+            else
+            {
+               cout << "Unknown input for SoPlex suopport (on/off expected). Read "
+               << string(str) << " instead" << endl;
+               cout << "Continue with default setings (SoPlex on)" << endl;
+            }
+         }
+         else
+         {
+            printUsage(argv, optidx);
+            return 1;
+         }
+      }
+   }
+
+   certificateFile.open(certificateFileName);
 
    if( certificateFile.fail() )
    {
       cerr << "Failed to open file " << argv[1] << endl;
+      printUsage(argv, -1);
       return returnStatement;
    }
 
@@ -170,6 +289,7 @@ int main(int argc, char *argv[])
    if( completedFile.fail() )
    {
       cerr << "Failed to open file " << path << endl;
+      printUsage(argv, -1);
       return returnStatement;
    }
 
@@ -182,99 +302,7 @@ int main(int argc, char *argv[])
    baselp.setRealParam(SoPlex::FEASTOL, 0.0);
    baselp.setRealParam(SoPlex::OPTTOL, 0.0);
 
-   if( argc == 2 )
-   {
-      baselp.setIntParam(SoPlex::VERBOSITY, 0);
-      cout << "Verbosity level set to 0 (default)." << endl;
-      cout << "Debugmode set to OFF (default)." << endl;
-   }
-
-   else if( argc == 3 )
-   {
-
-      if( isdigit(*argv[2]) )
-      {
-         int verbosity;
-         verbosity = atoi(argv[2]);
-         if( verbosity < 0 || verbosity > 5 )
-         {
-            baselp.setIntParam(SoPlex::VERBOSITY, 0);
-            cerr << "Verbosity level outside range 0 to 5. Read " << verbosity << " instead." << endl;
-            cout << "Continue with default settings (verbosity = 0)." << endl;
-         }
-         else
-         {
-            baselp.setIntParam(SoPlex::VERBOSITY, verbosity);
-            cout << "Verbosity level set to " << verbosity << "." << endl;
-         }
-      }
-      else
-      {
-         if( string(argv[2]) == "ON")
-         {
-            baselp.setIntParam(SoPlex::VERBOSITY, 0);
-            debugmode = true;
-            cout << "Verbosity level set to 0 (default)." << endl;
-            cout << "Debugmode turned on." << endl;
-         }
-         else if( string(argv[2]) == "OFF")
-         {
-            baselp.setIntParam(SoPlex::VERBOSITY, 0);
-            cout << "Verbosity level set to 0 (default)." << endl;
-            cout << "Debugmode turned off." << endl;
-         }
-         else
-         {
-            baselp.setIntParam(SoPlex::VERBOSITY, 0);
-            cout << "Unknown input for SoPlex verbosity (range 0 to 5 expected) "
-            << "or debug settings (ON/OFF expected). Read "
-            << string(argv[2]) << " instead" << endl;
-            cout << "Verbosity level set to 0 (default)." << endl;
-            cout << "Debugmode set to OFF (default)." << endl;
-         }
-      }
-   }
-   else if( argc == 4 )
-   {
-      // Set SoPlex verbosity
-      int verbosity;
-      if( !isdigit(*argv[2]) )
-      {
-         baselp.setIntParam(SoPlex::VERBOSITY, 0);
-         cout << "Verbosity level is not a number. Read " << argv[2] << " instead." << endl;
-         cout << "Continue with default settings (verbosity = 0)." << endl;
-      }
-      verbosity = atoi(argv[2]);
-      if( verbosity < 0 || verbosity > 5 )
-      {
-         baselp.setIntParam(SoPlex::VERBOSITY, 0);
-         cerr << "Verbosity level outside range 0 to 5. Read " << verbosity << " instead." << endl;
-         cout << "Continue with default settings (verbosity = 0)." << endl;
-      }
-      else
-      {
-         baselp.setIntParam(SoPlex::VERBOSITY, verbosity);
-         cout << "Verbosity level set to " << verbosity << "." << endl;
-      }
-      // Set Debugmode
-      if( string(argv[3]) == "ON")
-      {
-         debugmode = true;
-         cout << "Debugmode turned on." << endl;
-      }
-      else if( string(argv[3]) == "OFF")
-      {
-         cout << "Debugmode turned off." << endl;
-      }
-      else
-      {
-         cout << "Unknown input for debug settings (ON/OFF expected). Read "
-         << string(argv[3]) << " instead" << endl;
-         cout << "Continue with default setings (debugmode OFF)" << endl;
-      }
-   }
-
-
+   baselp.setIntParam(SoPlex::VERBOSITY, verbosity);
 
    double start_cpu_tm = clock();
    if( processVER() )
@@ -415,11 +443,14 @@ bool processVAR(SoPlex &workinglp)
          break;
             }
             completedFile <<"\r\n" + tmp;
-            workinglp.addColRational( LPColRational( 1, dummycol, infinity, -infinity ) );
+            if( usesoplex )
+            {
+               workinglp.addColRational( LPColRational( 1, dummycol, infinity, -infinity ) );
+               correspondingCertRow[{i, false}] = make_pair( -1, -1 );
+               originalCertRow[{i, false}] = make_pair( -1, -1);
+               isInt[i] = false;
+            }
             variables.push_back( tmp );
-            correspondingCertRow[{i, false}] = make_pair( -1, -1 );
-            originalCertRow[{i, false}] = make_pair( -1, -1);
-            isInt[i] = false;
          }
       }
    }
@@ -531,9 +562,11 @@ bool processOBJ(SoPlex &workinglp)
       indices.push_back(idx);
    }
 
-   ObjCoeff.add(numberOfObjCoeff, indices.data(), values.data());
-   Objective.assign(ObjCoeff);
-   workinglp.changeObjRational(Objective);
+   ObjCoeff->add(numberOfObjCoeff, indices.data(), values.data());
+   Objective.assign(*ObjCoeff);
+
+   if( usesoplex )
+      workinglp.changeObjRational(Objective);
 
    returnStatement = true;
    return returnStatement;
@@ -686,23 +719,23 @@ static bool isEqual(DSVectorRational row1, DSVectorRational row2)
 
 // write a row to the the completed File.
 // This does not write the reasoning why this constraint is valid
-bool printRowToCertificate(DSVectorRational row, string& sense, Rational rhs, string label)
+bool printRowToCertificate(DSVectorPointer row, string& sense, Rational rhs, string label, bool isobjective)
 {
    completedFile << label << " ";
    completedFile << sense;
 
    completedFile << " " << rhs << " ";
 
-   if( isEqual(row, ObjCoeff) )
+   if( isobjective )
    {
       completedFile << "OBJ ";
    }
    else
    {
-      completedFile << row.size();
-      for( size_t i = 0; i < row.size(); i++ )
+      completedFile << row->size();
+      for( size_t i = 0; i < row->size(); i++ )
       {
-         completedFile << " " << row.index(i) << " " << row[row.index(i)];
+         completedFile << " " << row->index(i) << " " << (*row)[row->index(i)];
       }
    }
 
@@ -743,10 +776,11 @@ bool processDER(SoPlex &workinglp)
 
    for( long i = 0; i < numberOfDerivations; ++i )
    {
-      DSVectorRational row(0);
+      DSVectorPointer row(make_shared<DSVectorRational>());
       vector<Rational> values;
       vector<int> indices;
       currentDerivation += 1;
+      bool isobjective;
 
       int n = numberOfDerivations + numberOfConstraints;
       bool global;
@@ -763,11 +797,13 @@ bool processDER(SoPlex &workinglp)
 
       if( numberOfCoefficients == "OBJ" )
       {
+         isobjective = true;
          row = ObjCoeff;
-         intOfCoefficients = row.size();
+         intOfCoefficients = row->size();
       }
       else
       {
+         isobjective = false;
          intOfCoefficients = atoi(numberOfCoefficients.c_str());
          values.reserve(intOfCoefficients);
          indices.reserve(intOfCoefficients);
@@ -778,7 +814,7 @@ bool processDER(SoPlex &workinglp)
             indices.push_back(idx);
          }
 
-         row.add(intOfCoefficients, indices.data(), values.data());
+         row->add(intOfCoefficients, indices.data(), values.data());
       }
 
       switch(consense[0])
@@ -807,13 +843,13 @@ bool processDER(SoPlex &workinglp)
       {
          if( kind == "asm")
          {
-            printRowToCertificate(row, consense, rhs, label);
+            printRowToCertificate(row, consense, rhs, label, isobjective);
             completedFile << " " + bracket + " " + kind;
             returnStatement = derisasm();
          }
          else if( kind == "lin")
          {
-            printRowToCertificate(row, consense, rhs, label);
+            printRowToCertificate(row, consense, rhs, label, isobjective);
             completedFile << " " + bracket + " " + kind;
             returnStatement = derislin(workinglp, row, consense, rhs, label);
             if( !returnStatement )
@@ -821,25 +857,25 @@ bool processDER(SoPlex &workinglp)
          }
          else if( kind == "rnd" )
          {
-            printRowToCertificate(row, consense, rhs, label);
+            printRowToCertificate(row, consense, rhs, label, isobjective);
             completedFile << " " + bracket + " " + kind;
             returnStatement = derisrnd();
          }
          else if( kind == "uns" )
          {
-            printRowToCertificate(row, consense, rhs, label);
+            printRowToCertificate(row, consense, rhs, label, isobjective);
             completedFile << " " + bracket + " " + kind;
             returnStatement = derisuns();
          }
          else if( kind == "sol")
          {
-            printRowToCertificate(row, consense, rhs, label);
+            printRowToCertificate(row, consense, rhs, label, isobjective);
             completedFile << " " + bracket + " " + kind;
             returnStatement = derisasm();
          }
          else if( kind == "asm")
          {
-            printRowToCertificate(row, consense, rhs, label);
+            printRowToCertificate(row, consense, rhs, label, isobjective);
             completedFile << " " + bracket + " " + kind;
             returnStatement = derissol();
          }
@@ -849,7 +885,7 @@ bool processDER(SoPlex &workinglp)
             returnStatement = false;
          }
          if( intOfCoefficients == 1 )
-            processGlobalBoundChange(rhs, row[row.index(0)], idx, numberOfConstraints + i, sense);
+            processGlobalBoundChange(rhs, (*row)[row->index(0)], idx, numberOfConstraints + i, sense);
          else
             certificateFile.ignore(numeric_limits<streamsize>::max(), '\n');
       }
@@ -866,7 +902,7 @@ bool getConstraints(SoPlex &workinglp, string &consense, Rational &rhs, int &act
    bool returnStatement = true;
    string numberOfCoefficients,normalizedSense, actualsense;
    int intOfCoefficients = 0, sense;
-   DSVectorRational row(0);
+   DSVectorPointer row(make_shared<DSVectorRational>());
    vector<Rational> values;
    vector<int> indices;
    long idx, lastrow;
@@ -933,29 +969,46 @@ bool getConstraints(SoPlex &workinglp, string &consense, Rational &rhs, int &act
          }
       }
 
-      row.add(intOfCoefficients, indices.data(), values.data());
+      row->add(intOfCoefficients, indices.data(), values.data());
    }
 
-   if( consense == "E")
+   /* only populate soplex LP if soplex is actually run */
+   if( usesoplex )
+   {
+      if( consense == "E")
       {
-         workinglp.addRowRational( LPRowRational( rhs, row, rhs) );
+         workinglp.addRowRational( LPRowRational( rhs, *row, rhs) );
          sense = 0;
       }
-   else if( consense == "L" )
+      else if( consense == "L" )
       {
-         workinglp.addRowRational( LPRowRational( -infinity, row, rhs) );
+         workinglp.addRowRational( LPRowRational( -infinity, *row, rhs) );
          sense = -1;
       }
-   else if( consense == "G" )
+      else if( consense == "G" )
       {
-         workinglp.addRowRational( LPRowRational( rhs, row, infinity) );
+         workinglp.addRowRational( LPRowRational( rhs, *row, infinity) );
          sense = 1;
       }
-   else
-      returnStatement = false;
+      else
+         returnStatement = false;
 
-   lastrow = workinglp.numRows();
-   correspondingCertRow[{lastrow-1, true}] = make_pair(activeConstraint, activeConstraint);
+      lastrow = workinglp.numRows();
+      correspondingCertRow[{lastrow-1, true}] = make_pair(activeConstraint, activeConstraint);
+   }
+   else
+   {
+      /* code */
+      if( consense == "E")
+         sense = 0;
+      else if( consense == "L" )
+         sense = -1;
+      else if( consense == "G" )
+         sense = 1;
+      else
+         returnStatement = false;
+   }
+
    constraints.push_back(make_tuple(row, Rational(rhs), sense));
 
    return returnStatement;
@@ -1052,11 +1105,11 @@ static bool readLinComb( int &sense, Rational &rhs, SVectorRat& coefficients, SV
 
          auto &con = constraints[index];
 
-         DSVectorRational c = get<0>(con);
+         DSVectorPointer c = get<0>(con);
 
-         for( auto i = 0; i < c.size(); ++i )
+         for( auto i = 0; i < c->size(); ++i )
          {
-            (coefficients)[c.index(i)] += a * c[c.index(i)];
+            (coefficients)[c->index(i)] += a * (*c)[c->index(i)];
          }
 
          rhs += a * get<1>(con);
@@ -1067,7 +1120,7 @@ static bool readLinComb( int &sense, Rational &rhs, SVectorRat& coefficients, SV
 }
 
 // Complete "lin"-type derivations marked "weak"
-static bool completeWeakDomination(DSVectorRational &row, string &consense, Rational &rhs)
+static bool completeWeakDomination(DSVectorPointer row, string &consense, Rational &rhs)
 {
    SVectorRat coefDer;
    SVectorRat multDer;
@@ -1137,7 +1190,7 @@ static bool completeWeakDomination(DSVectorRational &row, string &consense, Rati
    {
       int idx = it->first;
       Rational derivedVal = it->second;
-      Rational valToDerive = row[idx];
+      Rational valToDerive = (*row)[idx];
 
       coefDer[idx] = valToDerive;
 
@@ -1211,11 +1264,11 @@ static bool completeWeakDomination(DSVectorRational &row, string &consense, Rati
       }
    }
    // now go the other way
-   for( int i = 0; i < row.size(); ++i )
+   for( int i = 0; i < row->size(); ++i )
    {
-      int idx = row.index(i);
+      int idx = row->index(i);
       Rational derivedVal = coefDer[idx];
-      Rational valToDerive = row[idx];
+      Rational valToDerive = (*row)[idx];
 
       if( derivedVal == valToDerive )
          continue;
@@ -1327,7 +1380,7 @@ static bool completeWeakDomination(DSVectorRational &row, string &consense, Rati
 
 // Case derivation is "lin"
 // Completes cases "incomplete" or "weak"
-bool derislin(SoPlex &workinglp, DSVectorRational &row, string &consense, Rational &rhs, string &label)
+bool derislin(SoPlex &workinglp, DSVectorPointer row, string &consense, Rational &rhs, string &label)
 {
 
    string numberOfCoefficients, tmp, bracket;
@@ -1346,9 +1399,17 @@ bool derislin(SoPlex &workinglp, DSVectorRational &row, string &consense, Ration
    if( numberOfCoefficients == "incomplete" )
    {
       VectorRational newObjective(0);
+
+      assert(usesoplex);
+
+      if( !usesoplex )
+      {
+         cerr << "soplex support must be enabled to process incomplete constraint type. rerun with parameter usesoplex=ON." << endl;
+         return false;
+      }
       newObjective.reSize(numberOfVariables);
       newObjective.reDim(numberOfVariables);
-      newObjective = row;
+      newObjective = *row;
       workinglp.changeObjRational(newObjective);
 
       if( consense == "G" or consense == "E" )
@@ -1503,12 +1564,14 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
 {
    string tmp;
    long numrows, derHierarchy;
-   DSVectorRational row(0);
+   DSVectorPointer row(make_shared<DSVectorRational>());
    int consense, normalizedSense;
    Rational rhs;
    lpIndex lpData;
    Rational normalizedRhs;
    vector<long> rowsToDelete;
+
+   assert(usesoplex);
 
    DVectorRational dualmultipliers(0);
    DVectorRational reducedcosts(0);
@@ -1555,30 +1618,30 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
       consense = get<2>(missingCon);
       rhs = get<1>(missingCon);
 
-      if( row.size() == 1 && false )
+      if( row->size() == 1 && false )
       {
          // normalize bound constraints
 
          if( consense == 0)
             normalizedSense = 0;
          else if( consense == -1 )
-            if( sign(row.value(0)) <= 0 )
+            if( sign(row->value(0)) <= 0 )
                normalizedSense = 1;
             else normalizedSense = -1;
          else
-            if( sign(row.value(0)) <= 0 )
+            if( sign(row->value(0)) <= 0 )
                normalizedSense = -1;
             else normalizedSense = 1;
 
-         normalizedRhs = rhs/row.value(0);
+         normalizedRhs = rhs/row->value(0);
 
          if( normalizedSense == 0 )
          {
-            if( workinglp.upperRational(row.index(0)) >= normalizedRhs )
+            if( workinglp.upperRational(row->index(0)) >= normalizedRhs )
             {
-               if( workinglp.lowerRational(row.index(0)) > normalizedRhs )
+               if( workinglp.lowerRational(row->index(0)) > normalizedRhs )
                {
-                  workinglp.addRowRational( LPRowRational( -infinity, row, rhs ) );
+                  workinglp.addRowRational( LPRowRational( -infinity, *row, rhs ) );
                   correspondingCertRow[{ workinglp.numRows()-1, true }] = make_pair( *derIterator, *derIterator );
                   correspondingLpData[*derIterator] = {workinglp.numRows()-1 , true};
                   assert(ncurrent + 1 == workinglp.numRowsRational());
@@ -1586,9 +1649,9 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
 
                else
                {
-                  workinglp.changeUpperRational( row.index(0), normalizedRhs );
-                  correspondingCertRow[{ row.index(0), false }] = make_pair( *derIterator, *derIterator );
-                  correspondingLpData[*derIterator] = {row.index(0), false};
+                  workinglp.changeUpperRational( row->index(0), normalizedRhs );
+                  correspondingCertRow[{ row->index(0), false }] = make_pair( *derIterator, *derIterator );
+                  correspondingLpData[*derIterator] = {row->index(0), false};
                }
             }
             else
@@ -1597,20 +1660,20 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
                return false;
             }
 
-            if( workinglp.lowerRational(row.index(0)) <= normalizedRhs )
+            if( workinglp.lowerRational(row->index(0)) <= normalizedRhs )
             {
-               if( workinglp.upperRational(row.index(0)) < normalizedRhs )
+               if( workinglp.upperRational(row->index(0)) < normalizedRhs )
                {
-                  workinglp.addRowRational( LPRowRational( rhs, row, infinity ) );
+                  workinglp.addRowRational( LPRowRational( rhs, *row, infinity ) );
                   correspondingCertRow[{ workinglp.numRows()-1, true }] = make_pair( *derIterator, *derIterator );
                   correspondingLpData[*derIterator] = {workinglp.numRows()-1 , true};
                   assert(ncurrent + 1 == workinglp.numRowsRational());
                }
                else
                {
-                  workinglp.changeLowerRational( row.index(0), normalizedRhs );
-                  correspondingCertRow[{ row.index(0), false }] = make_pair( *derIterator, *derIterator );
-                  correspondingLpData[*derIterator] = {row.index(0), false};
+                  workinglp.changeLowerRational( row->index(0), normalizedRhs );
+                  correspondingCertRow[{ row->index(0), false }] = make_pair( *derIterator, *derIterator );
+                  correspondingLpData[*derIterator] = {row->index(0), false};
                }
             }
             else
@@ -1622,11 +1685,11 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
 
 
 
-         else if( normalizedSense == -1 && workinglp.upperRational(row.index(0)) >= normalizedRhs )
+         else if( normalizedSense == -1 && workinglp.upperRational(row->index(0)) >= normalizedRhs )
          {
-            if( workinglp.lowerRational(row.index(0)) > normalizedRhs )
+            if( workinglp.lowerRational(row->index(0)) > normalizedRhs )
             {
-               workinglp.addRowRational( LPRowRational( -infinity, row, rhs ) );
+               workinglp.addRowRational( LPRowRational( -infinity, *row, rhs ) );
                correspondingCertRow[{ workinglp.numRows()-1, true }] = make_pair( *derIterator, *derIterator );
                correspondingLpData[*derIterator] = {workinglp.numRows()-1 , true};
                assert(ncurrent + 1 == workinglp.numRowsRational());
@@ -1634,27 +1697,27 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
 
             else
             {
-               workinglp.changeUpperRational( row.index(0), normalizedRhs );
-               correspondingCertRow[{ row.index(0), false }] = make_pair( *derIterator, *derIterator );
-               correspondingLpData[*derIterator] = {row.index(0), false};
+               workinglp.changeUpperRational( row->index(0), normalizedRhs );
+               correspondingCertRow[{ row->index(0), false }] = make_pair( *derIterator, *derIterator );
+               correspondingLpData[*derIterator] = {row->index(0), false};
             }
          }
 
 
-         else if( normalizedSense == 1 && workinglp.lowerRational(row.index(0)) <= normalizedRhs )
+         else if( normalizedSense == 1 && workinglp.lowerRational(row->index(0)) <= normalizedRhs )
          {
-            if( workinglp.upperRational(row.index(0)) < normalizedRhs )
+            if( workinglp.upperRational(row->index(0)) < normalizedRhs )
             {
-               workinglp.addRowRational( LPRowRational( rhs, row, infinity ) );
+               workinglp.addRowRational( LPRowRational( rhs, *row, infinity ) );
                correspondingCertRow[{ workinglp.numRows()-1, true }] = make_pair( *derIterator, *derIterator );
                correspondingLpData[*derIterator] = {workinglp.numRows()-1 , true};
                assert(ncurrent + 1 == workinglp.numRowsRational());
             }
             else
             {
-               workinglp.changeLowerRational( row.index(0), normalizedRhs );
-               correspondingCertRow[{ row.index(0), false }] = make_pair( *derIterator, *derIterator );
-               correspondingLpData[*derIterator] = {row.index(0), false};
+               workinglp.changeLowerRational( row->index(0), normalizedRhs );
+               correspondingCertRow[{ row->index(0), false }] = make_pair( *derIterator, *derIterator );
+               correspondingLpData[*derIterator] = {row->index(0), false};
             }
          }
          else
@@ -1665,11 +1728,11 @@ bool completeLin(SoPlex &workinglp, vector<long> &derToDelete, vector<long> &der
       }
       else {
          if( consense == 0 )
-               workinglp.addRowRational( LPRowRational( rhs, row, rhs ) );
+               workinglp.addRowRational( LPRowRational( rhs, *row, rhs ) );
          else if( consense == -1 )
-               workinglp.addRowRational( LPRowRational( -infinity, row, rhs ) );
+               workinglp.addRowRational( LPRowRational( -infinity, *row, rhs ) );
          else if( consense == 1 )
-               workinglp.addRowRational( LPRowRational( rhs, row, infinity ) );
+               workinglp.addRowRational( LPRowRational( rhs, *row, infinity ) );
          else
             return false;
 
@@ -1742,8 +1805,8 @@ bool printReasoningToCertificate(DVectorRational &dualmultipliers, DVectorRation
    {
 
       certIndex = correspondingCertRow[{i, true}].first;
-      if( get<0>(constraints[certIndex]).dim() == 1 )
-         correctionFactor = get<0>(constraints[certIndex]).value(0);
+      if( get<0>(constraints[certIndex])->dim() == 1 )
+         correctionFactor = get<0>(constraints[certIndex])->value(0);
       else
          correctionFactor = 1;
 
