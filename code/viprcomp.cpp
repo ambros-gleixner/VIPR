@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
       return returnStatement;
    }
 
-   string path = argv[1];
+   string path = certificateFileName;
    modifyFileName(path, "_complete.vipr");
 
    completedFile.open( path.c_str(), ios::out );
