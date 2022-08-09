@@ -12,12 +12,14 @@ We refer to two kinds of numbers: indices and values. Indices are integers. Valu
 ### Constraints
 The certificate file includes two kinds of constraints: the constraints of the MILP problem and derived constraints. Constraints have unique constraint names and are assigned indices starting from $0$ according to the order in which they appear in the certificate file.
 
-Each constraint is of the form $$a_{i_1}X_{i_1}+\dots+a_{i_p}X_{i_p} \text{sense}\ \beta, $$ where `sense` is $=,\leq$ or $\geq,\beta$ is a rational value, $p\in\{1,\dots,n\},$ and for $j=1,\dots p,i_j$ is a variable index, $X_{i_j}$ is a variable with index $i_j,$ and $a_{i_j}$ is a rational value.
+Each constraint is of the form $a_{i_1}X_{i_1}+\dots+a_{i_p}X_{i_p} \text{sense}\ \beta,$ where `sense` is $=,\leq$ or $\geq,\beta$ is a rational value, $p\in\{1,\dots,n\},$ and for $j=1,\dots p,i_j$ is a variable index, $X_{i_j}$ is a variable with index $i_j,$ and $a_{i_j}$ is a rational value.
 
 Bound constraints such as $0\leq\beta\leq 1$ are not treated specially.
 
 ### Rounding
-Suppose that the constraint $$a_{i_1}X_{i_1}+\dots+a_{i_p}X_{i_p} \text{sense}\ \beta, $$ where `sense` is $\leq$ or $\geq,$ is such that fpr $j=1,\dots, p,a_{i_j}$ is and integer and is nonzero only if $i_j$ is an integer variable index, then the constraint $$a_{i_1}X_{i_1}+\dots+a_{i_p}X_{i_p} \text{sense}\ \beta' $$ with $$\beta' =
+Suppose that the constraint $a_{i_1}X_{i_1}+\dots+a_{i_p}X_{i_p} \text{sense}\ \beta,$ where `sense` is $\leq$ or $\geq,$ is such that fpr $j=1,\dots, p,a_{i_j}$
+is and integer and is nonzero only if $i_j$ is an integer variable index, then the constraint $a_{i_1}X_{i_1}+\dots+a_{i_p}X_{i_p} \text{sense}\ \beta'$ with
+$$\beta' =
 \left \{
 \begin{array}{ll}
 \lfloor\beta\rfloor & \text{if sense is } \leq \\
@@ -44,9 +46,10 @@ $$s(C)=\left\{
 -1 & \text{if } C\text{ is a } \leq\text{-constraint} \\
 \end{array}
 \right. $$
-For example, for the constraint $C_1:  2X_1+3X_2\geq 1$, we have $$l(C_1)=2X_1+3X_2,r(C_1)=1,s(C_1)=1. $$
+For example, for the constraint $C_1:  2X_1+3X_2\geq 1$, we have $l(C_1)=2X_1+3X_2,r(C_1)=1,s(C_1)=1.$
 Let $C_1,\dots,C_k$ be constraint names. Let $\lambda_1,\dots,\lambda_k$ be values such that $\lambda_js(C_j)\geq 0$ for all $j=1,…,k,$ or $\lambda_js(C_j)\leq 0$ for all $j=1,…,k.$
-Then $\lambda_1\cdot C_1+\dots +\lambda_k \cdot C_k$ is called a suitable linear combination and denotes the constraint $$
+Then $\lambda_1\cdot C_1+\dots +\lambda_k \cdot C_k$ is called a suitable linear combination and denotes the constraint
+$$
 \left\{
 \begin{array}{ll}
 \sum_{i=1}^k\lambda_i l(C_i)=\sum_{i=1}^k\lambda_i r(C_i) & \text{if }\lambda_j s(C_j) = 0 \text{ for all } j=1,\dots,k \\
@@ -56,7 +59,7 @@ Then $\lambda_1\cdot C_1+\dots +\lambda_k \cdot C_k$ is called a suitable linear
 \right. $$
 
 ## Constraint format
-Specifying a constraint $$a_{i_1}X_{i_1}+\cdots+a_{i_p}X_{i_p}\text{ sense }\beta $$ in constraint format means listing the details of the constraint in the following order: the constraint name, then the character representing 𝚜𝚎𝚗𝚜𝚎 (`E` when `sense` is $=,$ `L` when `sense` is $\leq,$ `G` when `sense` is $\geq$), then $\beta$, then
+Specifying a constraint $a_{i_1}X_{i_1}+\cdots+a_{i_p}X_{i_p}\text{ sense }\beta$ in constraint format means listing the details of the constraint in the following order: the constraint name, then the character representing 𝚜𝚎𝚗𝚜𝚎 (`E` when `sense` is $=,$ `L` when `sense` is $\leq,$ `G` when `sense` is $\geq$), then $\beta$, then
 - $p$ $i_1$ $a_{i_1}$ $\cdots$ $i_p$ $a_{i_p}$;
 - or the keyword `OBJ` for indicating that $a_{i_1}X_{i_1}+⋯+a_{i_p}X_{i_p}$ is the same as the objective function.
 
@@ -79,7 +82,7 @@ A `reason` associated with a constraint with constraint index `idx` must have on
 - { asm }
 - {  lin  $p$  $i_1$  $\lambda_1$ $\cdots$  $i_p$  $\lambda_p$  } where $p$ is a nonnegative integer, $i_1,\dots,i_p$ are distinct indices at least $0$ and less than `idx`, and $\lambda_1,\dots,\lambda_p$ are rational values such that $\lambda_1\cdot C_{i_1}+\dots+\lambda_p\cdot C_{i_p}$ is a suitable linear combination that dominates the associated constraint; here $C_{i_j}$ denotes the constraint with index $i_j$ for $j=1,\dots,p.$
 - {  rnd  $p$  $i_1$  $\lambda_1$  $\cdots$  $i_p$  $\lambda_p$  } where $p$ is a nonnegative integer, $i_1,\dots,i_p$ are distinct indices at least $0$ and less than `idx`, and $\lambda_1,\dots,\lambda_p$ are rational values such that $\lambda_1\cdot C_{i_1}+⋯+\lambda_p\cdot C_{i_p}$, is a suitable linear combination that can be rounded and the rounded constraint dominates the associated constraint; again $C_{i_j}$ denotes the constraint with index $i_j$ for $j=1,…,p.$
-- {  uns  $i_1$  $l_1$  $i_2$  $l_2$  } where $i_1, l_1, i_2, l_2$ are indices at least $0$ and less than `idx` such that the constraints indexed by $i_1$ and $i_2$ both dominate the associated constraint and the constraints indexed by $l_1$ and $l_2$ are, perhaps after reordering, $$a_{i_1}X_{i_1}+\cdots a_{i_p}X_{i_p}\leq\beta $$ and $$a_{i_1}X_{i_1}+\cdots a_{i_p}X_{i_p}\geq\beta +1$$ such that $\beta$ is an integer and for $j=1,…,p, a_{i_j}$ is an integer and $X_{i_j}$ is an integer variable.
+- {  uns  $i_1$  $l_1$  $i_2$  $l_2$  } where $i_1, l_1, i_2, l_2$ are indices at least $0$ and less than `idx` such that the constraints indexed by $i_1$ and $i_2$ both dominate the associated constraint and the constraints indexed by $l_1$ and $l_2$ are, perhaps after reordering, $a_{i_1}X_{i_1}+\cdots a_{i_p}X_{i_p}\leq\beta$ and $a_{i_1}X_{i_1}+\cdots a_{i_p}X_{i_p}\geq\beta +1$ such that $\beta$ is an integer and for $j=1,…,p, a_{i_j}$ is an integer and $X_{i_j}$ is an integer variable.
 - { sol }
 
 ## File format
@@ -133,11 +136,14 @@ where `objsense` is the keyword `min` for minimization or `max` for maximization
 separated by spaces or line breaks where for $j=1,…,k, i_j$ is a variable index and $c_k$ is the objective function coefficient for the variable with index $i_j.$
 
 For example, the `OBJ` section for the problem
-$$\begin{array}{ll}
+$$
+\begin{array}{ll}
 \text{min} & x+y \\
 \text{s.t.} & C_1:4x+y\geq 1 \\
  & C_2:4x-y\leq 2\\
-\end{array} $$ could look like the following
+\end{array}
+$$
+could look like the following
 ```
 OBJ min
 2  0 1  1 1
@@ -186,7 +192,7 @@ The section begins with
 `SOL s`
 where s is the number of solutions to be verified for feasibility, and then followed by
 $S_1 \\ \vdots \\ S_s$
-such that for $j=1,…,s, S_j$ is of the form $$\text{name } p\ i_1\ v_1\ \cdots\ i_p\ v_p, $$ where `name` is the solution name, $p$ is a nonnegative integer, and for $r=1,…,p, i_r$ is a variable index and $v_r$ is the solution value for the variable with index $i_r$. All other variables are assumed to have the value zero.
+such that for $j=1,…,s, S_j$ is of the form $\text{name } p\ i_1\ v_1\ \cdots\ i_p\ v_p,$ where `name` is the solution name, $p$ is a nonnegative integer, and for $r=1,…,p, i_r$ is a variable index and $v_r$ is the solution value for the variable with index $i_r$. All other variables are assumed to have the value zero.
 At least one of the solutions specified should have objective function value at least the lower bound given in the [RTP section](#rtp-section) in the case of maximization and at most the upper bound given in the [RTP section](rtp-section) in the case of minimization.
 For example, to specify the two solutions $(x,y)=(1,2)$ (which is feasible) and $(x,y)=(0,1)$ (which is optimal) where $x$ has variable index `0` and $y$ has variable index `1`, the `SOL` section could look like this:
 ```
@@ -223,4 +229,5 @@ C4 G 0     1  1 1   { rnd 1  2 1 } 4
 C5 G 1/4   OBJ     { lin 2  0 1/4  3 3/4 } 5
 C6 G 1     OBJ     { rnd 1  4 1 } 0
 ```
-A file called `cg.vipr` accompanying the example in this document can be found in the documentation.
+
+For a small example, we refer to the file [paper_eg3.vipr](code/paper_eg3.vipr).
