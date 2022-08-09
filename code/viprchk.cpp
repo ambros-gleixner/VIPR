@@ -38,7 +38,7 @@
 
 // Version control
 #define VERSION_MAJOR 1
-#define VERSION_MINOR 0
+#define VERSION_MINOR 1
 
 // Avoid using namespace std to avoid non-obvious complications (ambiguities)
 using std::map;
