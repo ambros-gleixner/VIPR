@@ -1406,11 +1406,8 @@ bool canUnsplit(  Constraint &toDer, const int con1, const int a1,
       cout << endl;
 #endif
 
-      for( auto it = asm2.begin(); it != asm2.end(); ++it ) {
-         if( assumptionList.find(it->first) != assumptionList.end() ) {
-            assumptionList[it->first] = true;
-         }
-      }
+      for( auto it = asm2.begin(); it != asm2.end(); ++it )
+         assumptionList[it->first] = true;
 
       if( branchAsm1.isTrashed() )
       {
