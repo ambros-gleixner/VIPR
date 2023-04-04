@@ -10,7 +10,7 @@ This repository contains a detailed technical specification of the certificate f
 
 The specification and handling of incomplete derivations in [Version 1.1](cert_spec_v1_1.md) was added for the purpose of the paper
 
-> TODO add arxiv link to preprint
+> Leon Eifler and Ambros Gleixner: [Safe and Verified Gomory Mixed Integer Cuts in a Rational MIP Framework](https://nbn-resolving.org/urn:nbn:de:0297-zib-90159). ZIB-Report 23-09, Zuse Institute Berlin, March 2023.
 
 Please cite both publications if you use VIPR in your work.
 
