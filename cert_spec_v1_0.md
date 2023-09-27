@@ -25,7 +25,8 @@ $$\beta' =
 \lfloor\beta\rfloor & \text{if sense is } \leq \\
 \lceil\beta\rceil & \text{if sense is } \geq \\
 \end{array}
-\right.$$ is said to be obtained from rounding.
+\right.$$
+is said to be obtained from rounding.
 
 ### Domination of constraints
 We use a restricted form of constraint domination. A constraint that is $0\geq \beta$ with $\beta >0$ , $0\leq\beta$ with $\beta<0$, or $0=\beta$ with $\beta\neq 0$ is called an absurdity or falsehood. Such a constraint dominates any other constraint.
@@ -132,7 +133,7 @@ INT 2
 
 The section begins with
 `OBJ objsense`
-where `objsense` is the keyword `min` for minimization or `max` for maximization, then followed by an integer $k$ and $2k$ numbers $$i_1\ c_1\ i_2\ c_2\ \dots\ i_k\ c_k$$
+where `objsense` is the keyword `min` for minimization or `max` for maximization, then followed by an integer $k$ and $2k$ numbers $i_1\ c_1\ i_2\ c_2\ \dots\ i_k\ c_k$
 separated by spaces or line breaks where for $j=1,…,k, i_j$ is a variable index and $c_k$ is the objective function coefficient for the variable with index $i_j.$
 
 For example, the `OBJ` section for the problem
@@ -163,7 +164,8 @@ $$\begin{array}{ll}
 \text{min} & x+y \\
 \text{s.t.} & C_1:4x+y\geq 1 \\
  & C_2:4x-y\leq 2\\
-\end{array} $$ could look like the following
+\end{array} $$
+could look like the following
 ```
 CON 2 0
 C1 G 1  2  0 4  1 1
@@ -218,7 +220,7 @@ Each constraint in this section carries implicitly a set of assumptions deduced 
 - If `reason` is {  uns  $i_1\  l_1\  i_2\  l_2$  }, then the set of assumptions is the union of the sets of assumptions of the constraint indexed by $i_1$ without $l_1$ and of the constraint indexed by $i_2$ without $l_2.$
 
 If the `RTP` section is `RTP infeas`, then the last constraint in this section should be an absurdity with an empty set of assumptions.
-If the `RTP` section is `RTP range lb ub`, then the last constraint in this section should be a constraint with an empty set of assumptions that dominates $\text{OBJ}\leq  lb$ in the case of minimization or $\text{OBJ}\leq ub$ in the case of maximization where `OBJ` denotes the objective function.
+If the `RTP` section is `RTP range lb ub`, then the last constraint in this section should be a constraint with an empty set of assumptions that dominates $\text{OBJ}\geq  lb$ in the case of minimization or $\text{OBJ}\leq ub$ in the case of maximization where `OBJ` denotes the objective function.
 
 **Remark.** The reason for specifying `index` is to allow a verifier to discard the corresponding constraint from memory once the verifier has completed verifying constraint with index `index`.
 
