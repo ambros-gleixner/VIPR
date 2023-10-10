@@ -25,7 +25,7 @@ Please cite both publications if you use VIPR in your work.
 
 ## File format specification `.vipr`
 
-A conceptual description of the verified integer programming result (`.vipr`) file format is given in the above articles.  A more detailed technical specification is provided [here](cert_spec_v1_1.html).
+A conceptual description of the verified integer programming result (`.vipr`) file format is given in the above articles.  A more detailed technical specification is provided [here](cert_spec_v1_1.md).
 
 A small example is given as [paper_eg3.vipr](code/paper_eg3.vipr).  Certificates for large MIP instances from the literature can be found as part of the [supplementary information](experiments/) of the article.
 
