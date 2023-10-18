@@ -40,24 +40,29 @@ Finally, the constraint $a^Tx=\beta$ dominates $a′^Tx=\beta′$ if $a=a′$ an
 ### Suitable linear combinations of constraints
 For a constraint named $C$, define $l(C)$ to be the left-hand side of $C$ and define $r(C)$ to be the right-hand side of $C$, and
 
-$$s(C)=\left\{
-\begin{array}{ll}
-1 & \text{if } C \text{ is a } \geq\text{-constraint}\\
-0 & \text{if } C\text{ is a } =\text{-constraint} \\
--1 & \text{if } C\text{ is a } \leq\text{-constraint} \\
-\end{array}
-\right. $$
+$$
+s(C)=\begin{cases}
+1 & \text{if } C \text{ is a } \geq\text{-constraint},\\
+0 & \text{if } C\text{ is a } =\text{-constraint}, \\
+-1 & \text{if } C\text{ is a } \leq\text{-constraint}.
+\end{cases}
+$$
+
 For example, for the constraint $C_1:  2X_1+3X_2\geq 1$, we have $l(C_1)=2X_1+3X_2,r(C_1)=1,s(C_1)=1.$
 Let $C_1,\dots,C_k$ be constraint names. Let $\lambda_1,\dots,\lambda_k$ be values such that $\lambda_js(C_j)\geq 0$ for all $j=1,…,k,$ or $\lambda_js(C_j)\leq 0$ for all $j=1,…,k.$
 Then $\lambda_1\cdot C_1+\dots +\lambda_k \cdot C_k$ is called a suitable linear combination and denotes the constraint
+
 $$
-\left\{
-\begin{array}{ll}
-\sum_{i=1}^k\lambda_i l(C_i)=\sum_{i=1}^k\lambda_i r(C_i) & \text{if }\lambda_j s(C_j) = 0 \text{ for all } j=1,\dots,k \\
-\sum_{i=1}^k\lambda_i l(C_i)\geq\sum_{i=1}^k\lambda_i r(C_i) & \text{if }\lambda_j s(C_j) \geq 0 \text{ for all } j=1,\dots,k \text{ and } \lambda_q s(C_q)\neq 0 \text{ for some } q\in\{1,\dots,k\} \\
-\sum_{i=1}^k\lambda_i l(C_i)\leq\sum_{i=1}^k\lambda_i r(C_i) & \text{if }\lambda_j s(C_j) \leq 0 \text{ for all } j=1,\dots,k \text{ and } \lambda_q s(C_q)\neq 0 \text{ for some } q\in\{1,\dots,k\}\\
-\end{array}
-\right. $$
+\sum_{i=1}^k\lambda_i l(C_i)=\sum_{i=1}^k\lambda_i r(C_i) \quad \text{ if }\lambda_j s(C_j) = 0 \text{ for all } j=1,\dots,k,
+$$
+
+$$
+\sum_{i=1}^k\lambda_i l(C_i)\geq\sum_{i=1}^k\lambda_i r(C_i) \quad \text{ if }\lambda_j s(C_j) \geq 0 \text{ for all } j=1,\dots,k \text{ and } \lambda_q s(C_q)\neq 0 \text{ for some } q\in\{1,\dots,k\},
+$$
+
+$$
+\sum_{i=1}^k\lambda_i l(C_i)\leq\sum_{i=1}^k\lambda_i r(C_i) \quad \text{ if }\lambda_j s(C_j) \leq 0 \text{ for all } j=1,\dots,k \text{ and } \lambda_q s(C_q)\neq 0 \text{ for some } q\in\{1,\dots,k\}.
+$$
 
 ## Constraint format
 Specifying a constraint $a_{i_1}X_{i_1}+\cdots+a_{i_p}X_{i_p}\text{ sense }\beta$ in constraint format means listing the details of the constraint in the following order: the constraint name, then the character representing 𝚜𝚎𝚗𝚜𝚎 (`E` when `sense` is $=,$ `L` when `sense` is $\leq,$ `G` when `sense` is $\geq$), then $\beta$, then
