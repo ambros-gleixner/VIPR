@@ -75,7 +75,7 @@ An example call for the completion script: `./viprcomp --verbosity=1 --debugmode
 
 - [Kevin K.H. Cheung](https://carleton.ca/math/people/kevin-cheung/), School of Mathematics and Statistics, Carleton University
 - [Ambros Gleixner](http://www.zib.de/gleixner), Zuse Institute and HTW Berlin
-- [Daniel E. Steffy](https://files.oakland.edu/users/steffy/web/), Department of Mathematics and Statistics, Oakland University
+- [Daniel E. Steffy](https://desteffy.github.io), Gurobi Optimization
 - [Leon Eifler](https://www.zib.de/members/eifler), Zuse Institute Berlin
 - [Fabian Frickenstein](https://www.zib.de/members/frickenstein), Zuse Institute Berlin
 
