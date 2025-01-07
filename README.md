@@ -10,7 +10,8 @@ This repository contains a detailed technical specification of the certificate f
 
 The specification and handling of incomplete derivations in [Version 1.1](cert_spec_v1_1.md) was added for the purpose of the paper
 
-> Leon Eifler and Ambros Gleixner: [Safe and Verified Gomory Mixed Integer Cuts in a Rational MIP Framework](https://nbn-resolving.org/urn:nbn:de:0297-zib-90159). ZIB-Report 23-09, Zuse Institute Berlin, March 2023.
+> Leon Eifler and Ambros Gleixner: [Safe and Verified Gomory Mixed Integer Cuts in a Rational MIP Framework](https://doi.org/10.1137/23M156046X).
+ In: SIAM Journal on Optimization 34.1, pp. 742–763, 2024.
 
 Please cite both publications if you use VIPR in your work.
 
@@ -77,7 +78,7 @@ An example call for the completion script: `./viprcomp --verbosity=1 --debugmode
 - [Ambros Gleixner](http://www.zib.de/gleixner), Zuse Institute and HTW Berlin
 - [Daniel E. Steffy](https://desteffy.github.io), Gurobi Optimization
 - [Leon Eifler](https://www.zib.de/members/eifler), Zuse Institute Berlin
-- [Fabian Frickenstein](https://www.zib.de/members/frickenstein), Zuse Institute Berlin
+- Fabian Frickenstein, Zuse Institute Berlin
 
 ## Software for generating `.vipr` certificates
 
